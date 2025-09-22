@@ -3,79 +3,709 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AlphaX AI</title>
+    <title>AlphaX AI - Advanced AI Platform</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        h1 {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             color: #333;
-            text-align: center;
         }
-        .api-section {
-            margin: 20px 0;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 5px;
+
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
         }
-        button {
-            background: #007bff;
-            color: white;
+
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: #667eea;
+        }
+
+        .auth-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.7rem 1.5rem;
             border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s;
         }
-        button:hover {
-            background: #0056b3;
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
         }
-        #result {
-            margin-top: 10px;
-            padding: 10px;
-            background: #e9ecef;
-            border-radius: 3px;
+
+        .btn-secondary {
+            background: transparent;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 120px 20px 40px;
+        }
+
+        .hero {
+            text-align: center;
+            color: white;
+            margin-bottom: 60px;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            animation: fadeInUp 1s ease-out;
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+            animation: fadeInUp 1s ease-out 0.2s both;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            animation: fadeInUp 1s ease-out 0.4s both;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 60px;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            transition: transform 0.3s;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+
+        .feature-card p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .demo-section {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 3rem;
+            border-radius: 15px;
+            margin-bottom: 60px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .demo-section h2 {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #333;
+        }
+
+        .demo-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 0.7rem 1.5rem;
+            border: none;
+            background: #f8f9fa;
+            color: #666;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .demo-content {
+            display: none;
+        }
+
+        .demo-content.active {
+            display: block;
+        }
+
+        .demo-form {
+            display: grid;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            display: grid;
+            gap: 0.5rem;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-control {
+            padding: 0.8rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .result-area {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            margin-top: 1rem;
+            min-height: 100px;
+            white-space: pre-wrap;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin-bottom: 60px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .footer {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            padding: 2rem 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .hero p {
+                font-size: 1.1rem;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .container {
+                padding: 100px 10px 20px;
+            }
         }
     </style>
 </head>
 <body>
+    <nav class="navbar">
+        <div class="nav-content">
+            <div class="logo">
+                <i class="fas fa-brain"></i> AlphaX AI
+            </div>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#demo">Demo</a></li>
+                <li><a href="#docs">Docs</a></li>
+                <li><a href="#api">API</a></li>
+            </ul>
+            <div class="auth-buttons">
+                <a href="#login" class="btn btn-secondary">Login</a>
+                <a href="#signup" class="btn btn-primary">Sign Up</a>
+            </div>
+        </div>
+    </nav>
+
     <div class="container">
-        <h1>AlphaX AI Dashboard</h1>
-        
-        <div class="api-section">
-            <h3>API Status</h3>
-            <button onclick="checkHealth()">Check API Health</button>
-            <div id="result"></div>
-        </div>
-        
-        <div class="api-section">
-            <h3>About</h3>
-            <p>Welcome to AlphaX AI - an advanced artificial intelligence platform.</p>
-        </div>
+        <section class="hero">
+            <h1>Advanced AI Platform</h1>
+            <p>Unlock the power of artificial intelligence with cutting-edge tools for text generation, image analysis, and data processing.</p>
+            <div class="hero-buttons">
+                <a href="#demo" class="btn btn-primary btn-lg">Try Demo</a>
+                <a href="#docs" class="btn btn-secondary btn-lg">View Docs</a>
+            </div>
+        </section>
+
+        <section class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="api-calls">0</div>
+                <div class="stat-label">API Calls Today</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="active-users">0</div>
+                <div class="stat-label">Active Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="models-supported">8</div>
+                <div class="stat-label">AI Models</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="uptime">99.9%</div>
+                <div class="stat-label">Uptime</div>
+            </div>
+        </section>
+
+        <section id="features" class="features">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-pen-fancy"></i>
+                </div>
+                <h3>Text Generation</h3>
+                <p>Generate high-quality content with advanced AI models. Create articles, stories, code, and more with customizable parameters.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-image"></i>
+                </div>
+                <h3>Image Analysis</h3>
+                <p>Analyze and understand images with computer vision. Extract insights, generate descriptions, and classify visual content.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-comments"></i>
+                </div>
+                <h3>Conversation AI</h3>
+                <p>Build intelligent chatbots and conversational interfaces. Maintain context and personality across multi-turn dialogues.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <h3>Data Processing</h3>
+                <p>Process and analyze datasets with AI-powered insights. Support for CSV, JSON, and various data formats.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-tags"></i>
+                </div>
+                <h3>Text Classification</h3>
+                <p>Classify text into custom categories. Sentiment analysis, topic detection, and content moderation made simple.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-compress-alt"></i>
+                </div>
+                <h3>Text Summarization</h3>
+                <p>Automatically summarize long documents and articles. Extract key information and create concise summaries.</p>
+            </div>
+        </section>
+
+        <section id="demo" class="demo-section">
+            <h2>Try Our AI Capabilities</h2>
+            
+            <div class="demo-tabs">
+                <button class="tab-btn active" data-tab="text-gen">Text Generation</button>
+                <button class="tab-btn" data-tab="image-analysis">Image Analysis</button>
+                <button class="tab-btn" data-tab="text-classify">Text Classification</button>
+                <button class="tab-btn" data-tab="summarize">Summarization</button>
+            </div>
+
+            <!-- Text Generation Demo -->
+            <div class="demo-content active" id="text-gen">
+                <div class="demo-form">
+                    <div class="form-group">
+                        <label for="text-prompt">Enter your prompt:</label>
+                        <textarea id="text-prompt" class="form-control" placeholder="Write a short story about a robot learning to paint..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="max-tokens">Max Tokens:</label>
+                        <input type="range" id="max-tokens" min="50" max="1000" value="200" class="form-control">
+                        <span id="tokens-value">200</span>
+                    </div>
+                    <button class="btn btn-primary" onclick="generateText()">
+                        <i class="fas fa-magic"></i> Generate Text
+                    </button>
+                </div>
+                <div class="loading" id="text-loading">
+                    <div class="spinner"></div>
+                    <p>Generating text...</p>
+                </div>
+                <div class="result-area" id="text-result">Results will appear here...</div>
+            </div>
+
+            <!-- Image Analysis Demo -->
+            <div class="demo-content" id="image-analysis">
+                <div class="demo-form">
+                    <div class="form-group">
+                        <label for="image-url">Image URL:</label>
+                        <input type="url" id="image-url" class="form-control" placeholder="https://example.com/image.jpg">
+                    </div>
+                    <div class="form-group">
+                        <label for="image-prompt">Analysis prompt (optional):</label>
+                        <input type="text" id="image-prompt" class="form-control" placeholder="Describe what you see in this image">
+                    </div>
+                    <button class="btn btn-primary" onclick="analyzeImage()">
+                        <i class="fas fa-eye"></i> Analyze Image
+                    </button>
+                </div>
+                <div class="loading" id="image-loading">
+                    <div class="spinner"></div>
+                    <p>Analyzing image...</p>
+                </div>
+                <div class="result-area" id="image-result">Results will appear here...</div>
+            </div>
+
+            <!-- Text Classification Demo -->
+            <div class="demo-content" id="text-classify">
+                <div class="demo-form">
+                    <div class="form-group">
+                        <label for="classify-text">Text to classify:</label>
+                        <textarea id="classify-text" class="form-control" placeholder="This movie was absolutely amazing! Great acting and storyline."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="classify-labels">Labels (comma-separated):</label>
+                        <input type="text" id="classify-labels" class="form-control" value="positive, negative, neutral">
+                    </div>
+                    <button class="btn btn-primary" onclick="classifyText()">
+                        <i class="fas fa-tags"></i> Classify Text
+                    </button>
+                </div>
+                <div class="loading" id="classify-loading">
+                    <div class="spinner"></div>
+                    <p>Classifying text...</p>
+                </div>
+                <div class="result-area" id="classify-result">Results will appear here...</div>
+            </div>
+
+            <!-- Summarization Demo -->
+            <div class="demo-content" id="summarize">
+                <div class="demo-form">
+                    <div class="form-group">
+                        <label for="summarize-text">Text to summarize:</label>
+                        <textarea id="summarize-text" class="form-control" placeholder="Enter a long text that you want to summarize..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="summary-length">Max summary length:</label>
+                        <input type="range" id="summary-length" min="50" max="300" value="150" class="form-control">
+                        <span id="length-value">150</span>
+                    </div>
+                    <button class="btn btn-primary" onclick="summarizeText()">
+                        <i class="fas fa-compress-alt"></i> Summarize
+                    </button>
+                </div>
+                <div class="loading" id="summarize-loading">
+                    <div class="spinner"></div>
+                    <p>Summarizing text...</p>
+                </div>
+                <div class="result-area" id="summarize-result">Results will appear here...</div>
+            </div>
+        </section>
+
+        <section class="demo-section">
+            <h2>API Health Status</h2>
+            <button class="btn btn-primary" onclick="checkHealth()">
+                <i class="fas fa-heart"></i> Check API Health
+            </button>
+            <div class="result-area" id="health-result">Click the button to check API health...</div>
+        </section>
     </div>
 
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 AlphaX AI. Advanced AI Platform for the modern world.</p>
+        </div>
+    </footer>
+
     <script>
+        // Tab switching functionality
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.dataset.tab;
+                
+                // Remove active class from all tabs and content
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.demo-content').forEach(c => c.classList.remove('active'));
+                
+                // Add active class to current tab and content
+                btn.classList.add('active');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+
+        // Range input updates
+        document.getElementById('max-tokens').addEventListener('input', (e) => {
+            document.getElementById('tokens-value').textContent = e.target.value;
+        });
+
+        document.getElementById('summary-length').addEventListener('input', (e) => {
+            document.getElementById('length-value').textContent = e.target.value;
+        });
+
+        // API Functions
         async function checkHealth() {
+            const resultDiv = document.getElementById('health-result');
             try {
                 const response = await fetch('/api/health');
                 const data = await response.json();
-                document.getElementById('result').innerHTML = 
-                    `<strong>Status:</strong> ${data.status}<br>
-                     <strong>Timestamp:</strong> ${data.timestamp}`;
+                resultDiv.innerHTML = `
+                    <strong>Status:</strong> ${data.status}<br>
+                    <strong>Timestamp:</strong> ${data.timestamp}<br>
+                    <strong>Uptime:</strong> ${Math.floor(data.uptime)} seconds<br>
+                    <strong>Memory Usage:</strong> ${Math.round(data.memory.used / 1024 / 1024)} MB
+                `;
+                resultDiv.style.borderLeftColor = '#28a745';
             } catch (error) {
-                document.getElementById('result').innerHTML = 
-                    `<strong>Error:</strong> ${error.message}`;
+                resultDiv.innerHTML = `<strong>Error:</strong> ${error.message}`;
+                resultDiv.style.borderLeftColor = '#dc3545';
             }
         }
+
+        function showLoading(loadingId) {
+            document.getElementById(loadingId).style.display = 'block';
+        }
+
+        function hideLoading(loadingId) {
+            document.getElementById(loadingId).style.display = 'none';
+        }
+
+        // Note: These functions would require authentication in a real implementation
+        async function generateText() {
+            const prompt = document.getElementById('text-prompt').value;
+            const maxTokens = document.getElementById('max-tokens').value;
+            const resultDiv = document.getElementById('text-result');
+            
+            if (!prompt) {
+                resultDiv.innerHTML = 'Please enter a prompt.';
+                return;
+            }
+
+            showLoading('text-loading');
+            resultDiv.innerHTML = 'This is a demo interface. In the full version, this would generate text using AI models. Please authenticate and use the API endpoints for actual functionality.';
+            hideLoading('text-loading');
+        }
+
+        async function analyzeImage() {
+            const imageUrl = document.getElementById('image-url').value;
+            const prompt = document.getElementById('image-prompt').value;
+            const resultDiv = document.getElementById('image-result');
+            
+            if (!imageUrl) {
+                resultDiv.innerHTML = 'Please enter an image URL.';
+                return;
+            }
+
+            showLoading('image-loading');
+            resultDiv.innerHTML = 'This is a demo interface. In the full version, this would analyze the image using computer vision models. Please authenticate and use the API endpoints for actual functionality.';
+            hideLoading('image-loading');
+        }
+
+        async function classifyText() {
+            const text = document.getElementById('classify-text').value;
+            const labels = document.getElementById('classify-labels').value;
+            const resultDiv = document.getElementById('classify-result');
+            
+            if (!text || !labels) {
+                resultDiv.innerHTML = 'Please enter text and labels.';
+                return;
+            }
+
+            showLoading('classify-loading');
+            resultDiv.innerHTML = 'This is a demo interface. In the full version, this would classify the text into the provided categories. Please authenticate and use the API endpoints for actual functionality.';
+            hideLoading('classify-loading');
+        }
+
+        async function summarizeText() {
+            const text = document.getElementById('summarize-text').value;
+            const maxLength = document.getElementById('summary-length').value;
+            const resultDiv = document.getElementById('summarize-result');
+            
+            if (!text) {
+                resultDiv.innerHTML = 'Please enter text to summarize.';
+                return;
+            }
+
+            showLoading('summarize-loading');
+            resultDiv.innerHTML = 'This is a demo interface. In the full version, this would create a summary of the provided text. Please authenticate and use the API endpoints for actual functionality.';
+            hideLoading('summarize-loading');
+        }
+
+        // Animate statistics on page load
+        function animateStats() {
+            const stats = [
+                { id: 'api-calls', target: 1234, suffix: '' },
+                { id: 'active-users', target: 89, suffix: '' },
+                { id: 'models-supported', target: 8, suffix: '' }
+            ];
+
+            stats.forEach(stat => {
+                const element = document.getElementById(stat.id);
+                let current = 0;
+                const increment = stat.target / 50;
+                
+                const timer = setInterval(() => {
+                    current += increment;
+                    if (current >= stat.target) {
+                        current = stat.target;
+                        clearInterval(timer);
+                    }
+                    element.textContent = Math.floor(current) + stat.suffix;
+                }, 50);
+            });
+        }
+
+        // Initialize animations when page loads
+        window.addEventListener('load', () => {
+            setTimeout(animateStats, 500);
+        });
+
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
     </script>
 </body>
 </html>
