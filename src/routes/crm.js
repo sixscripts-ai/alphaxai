@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const crmController = require('../controllers/crmController');
+const crmController = require('../controllers/crmTursoController');
 const { protect } = require('../middleware/auth');
 
 // Dashboard
