@@ -1,3 +1,5 @@
+const path = require('path');
+
 module.exports = {
   // Server Configuration
   server: {
@@ -8,34 +10,21 @@ module.exports = {
 
   // Database Configuration
   database: {
-    mongodb: {
-      url: process.env.DATABASE_URL || 'mongodb://localhost:27017/alphaxai',
-      options: {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-        maxPoolSize: 10,
-        serverSelectionTimeoutMS: 5000,
-        socketTimeoutMS: 45000
-      }
-    },
-    redis: {
-      url: process.env.REDIS_URL || 'redis://localhost:6379',
-      options: {
-        retryDelayOnFailover: 100,
-        maxRetriesPerRequest: 3
-      }
+    turso: {
+      url: process.env.TURSO_DATABASE_URL || `file:${path.join(process.cwd(), 'data', 'alphaxai.db')}`,
+      authToken: process.env.TURSO_AUTH_TOKEN || ''
     }
   },
 
   // AI Service Configuration
   ai: {
-    openai: {
-      apiKey: process.env.OPENAI_API_KEY,
-      baseUrl: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
+    gemini: {
+      apiKey: process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY,
+      baseUrl: process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta',
       models: {
-        gpt4: 'gpt-4',
-        gpt35turbo: 'gpt-3.5-turbo',
-        embedding: 'text-embedding-ada-002'
+        text: process.env.GEMINI_TEXT_MODEL || 'gemini-pro-3',
+        vision: process.env.GEMINI_VISION_MODEL || 'gemini-pro-vision',
+        embedding: process.env.GEMINI_EMBEDDING_MODEL || 'text-embedding-004'
       }
     },
     huggingface: {

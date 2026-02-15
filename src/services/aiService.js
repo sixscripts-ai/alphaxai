@@ -4,20 +4,19 @@ const logger = require('../utils/logger');
 
 class AIService {
   constructor() {
-    this.openaiClient = this.initOpenAI();
+    this.geminiClient = this.initGemini();
     this.huggingfaceClient = this.initHuggingFace();
   }
 
-  initOpenAI() {
-    if (!config.ai.openai.apiKey) {
-      logger.warn('OpenAI API key not configured');
+  initGemini() {
+    if (!config.ai.gemini.apiKey) {
+      logger.warn('Gemini API key not configured');
       return null;
     }
 
     return axios.create({
-      baseURL: config.ai.openai.baseUrl,
+      baseURL: config.ai.gemini.baseUrl,
       headers: {
-        'Authorization': `Bearer ${config.ai.openai.apiKey}`,
         'Content-Type': 'application/json'
       },
       timeout: 30000
@@ -41,27 +40,33 @@ class AIService {
   }
 
   async generateText(prompt, options = {}) {
-    if (!this.openaiClient) {
-      throw new Error('OpenAI client not initialized');
+    if (!this.geminiClient) {
+      throw new Error('Gemini client not initialized');
     }
 
     try {
-      const response = await this.openaiClient.post('/chat/completions', {
-        model: options.model || config.ai.openai.models.gpt35turbo,
-        messages: [
-          { role: 'user', content: prompt }
-        ],
-        max_tokens: options.maxTokens || 1000,
-        temperature: options.temperature || 0.7,
-        top_p: options.topP || 1,
-        frequency_penalty: options.frequencyPenalty || 0,
-        presence_penalty: options.presencePenalty || 0
-      });
+      const model = options.model || config.ai.gemini.models.text;
+      const response = await this.geminiClient.post(
+        `/models/${model}:generateContent?key=${config.ai.gemini.apiKey}`,
+        {
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: prompt }]
+            }
+          ],
+          generationConfig: {
+            maxOutputTokens: options.maxTokens || 1000,
+            temperature: options.temperature || 0.7,
+            topP: options.topP || 1
+          }
+        }
+      );
 
       return {
         success: true,
-        data: response.data.choices[0].message.content,
-        usage: response.data.usage
+        data: response.data.candidates?.[0]?.content?.parts?.[0]?.text || '',
+        usage: response.data.usageMetadata
       };
     } catch (error) {
       logger.error('Text generation error:', error.response?.data || error.message);
@@ -73,20 +78,24 @@ class AIService {
   }
 
   async generateEmbedding(text) {
-    if (!this.openaiClient) {
-      throw new Error('OpenAI client not initialized');
+    if (!this.geminiClient) {
+      throw new Error('Gemini client not initialized');
     }
 
     try {
-      const response = await this.openaiClient.post('/embeddings', {
-        model: config.ai.openai.models.embedding,
-        input: text
-      });
+      const response = await this.geminiClient.post(
+        `/models/${config.ai.gemini.models.embedding}:embedContent?key=${config.ai.gemini.apiKey}`,
+        {
+          content: {
+            parts: [{ text }]
+          }
+        }
+      );
 
       return {
         success: true,
-        data: response.data.data[0].embedding,
-        usage: response.data.usage
+        data: response.data.embedding?.values || [],
+        usage: response.data.usageMetadata
       };
     } catch (error) {
       logger.error('Embedding generation error:', error.response?.data || error.message);
@@ -98,29 +107,30 @@ class AIService {
   }
 
   async analyzeImage(imageUrl, prompt = 'Describe this image') {
-    if (!this.openaiClient) {
-      throw new Error('OpenAI client not initialized');
+    if (!this.geminiClient) {
+      throw new Error('Gemini client not initialized');
     }
 
     try {
-      const response = await this.openaiClient.post('/chat/completions', {
-        model: 'gpt-4-vision-preview',
-        messages: [
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: prompt },
-              { type: 'image_url', image_url: { url: imageUrl } }
-            ]
+      const response = await this.geminiClient.post(
+        `/models/${config.ai.gemini.models.vision}:generateContent?key=${config.ai.gemini.apiKey}`,
+        {
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: `${prompt}\nImage URL: ${imageUrl}` }]
+            }
+          ],
+          generationConfig: {
+            maxOutputTokens: 1000
           }
-        ],
-        max_tokens: 1000
-      });
+        }
+      );
 
       return {
         success: true,
-        data: response.data.choices[0].message.content,
-        usage: response.data.usage
+        data: response.data.candidates?.[0]?.content?.parts?.[0]?.text || '',
+        usage: response.data.usageMetadata
       };
     } catch (error) {
       logger.error('Image analysis error:', error.response?.data || error.message);

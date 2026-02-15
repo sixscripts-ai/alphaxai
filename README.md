@@ -1,11 +1,11 @@
 # AlphaX AI - Advanced AI Platform
 
-AlphaX AI is a comprehensive artificial intelligence platform that provides powerful AI capabilities including text generation, image analysis, data processing, and conversation management. Built with Node.js, Express, and MongoDB.
+AlphaX AI is a comprehensive artificial intelligence platform that provides powerful AI capabilities including text generation, image analysis, data processing, and conversation management. Built with Node.js, Express, and Turso (libSQL).
 
 ## Features
 
 ### 🤖 AI Capabilities
-- **Text Generation**: Advanced text generation using OpenAI GPT models
+- **Text Generation**: Advanced text generation using Google Gemini models
 - **Image Analysis**: Intelligent image analysis and description
 - **Text Classification**: Automated text classification with customizable labels
 - **Text Summarization**: Intelligent text summarization
@@ -26,12 +26,14 @@ AlphaX AI is a comprehensive artificial intelligence platform that provides powe
 ### 🔐 Security & Authentication
 - **JWT Authentication**: Secure token-based authentication
 - **Role-based Access**: User, moderator, and admin roles
+- **Organization Workspaces**: Multi-tenant workspaces with owner/admin/member roles
+- **Subscription Plans**: Starter, Growth, and Enterprise plans with usage and seat limits
 - **Rate Limiting**: API request rate limiting
 - **Input Validation**: Comprehensive input validation and sanitization
 
 ### 🚀 Performance & Scalability
 - **Docker Support**: Containerized deployment
-- **Database Optimization**: MongoDB with optimized queries
+- **Database Optimization**: Turso (libSQL) with tenant-scoped SQL queries
 - **Caching**: Redis-based caching for improved performance
 - **Load Balancing**: Nginx reverse proxy configuration
 
@@ -39,7 +41,7 @@ AlphaX AI is a comprehensive artificial intelligence platform that provides powe
 
 ### Prerequisites
 - Node.js 16+ 
-- MongoDB 5+
+- Turso (libSQL) database
 - Redis 6+ (optional)
 - Docker (optional)
 
@@ -62,6 +64,8 @@ AlphaX AI is a comprehensive artificial intelligence platform that provides powe
    # Edit .env with your configuration
    ```
 
+   Production startup now validates required env vars and will fail fast unless `TURSO_DATABASE_URL`, `JWT_SECRET`, and `GEMINI_API_KEY` (or `OPENAI_API_KEY`) are set.
+
 4. **Start the application**
    ```bash
    # Development mode
@@ -70,6 +74,32 @@ AlphaX AI is a comprehensive artificial intelligence platform that provides powe
    # Production mode
    npm start
    ```
+
+### Fully Automated Local Bootstrap
+
+```bash
+# 1) Start infra
+docker-compose up -d redis
+
+# 2) Install and prepare app
+npm install
+cp .env.example .env
+
+# 3) Set required provisioning values
+export PROVISION_OWNER_EMAIL=owner@yourcompany.com
+export PROVISION_OWNER_PASSWORD='ChangeMe123!'
+export PROVISION_OWNER_NAME='Platform Owner'
+export PROVISION_ORG_NAME='Your Company'
+export PROVISION_PLAN=enterprise
+
+# 4) Provision enterprise workspace + owner
+npm run provision:enterprise
+
+# 5) Run app
+npm run dev
+```
+
+> Database schema migrations are tracked in the `schema_migrations` table and applied automatically at startup.
 
 ### Docker Deployment
 
@@ -81,6 +111,10 @@ docker-compose up -d
 docker build -t alphaxai .
 docker run -p 3000:3000 alphaxai
 ```
+
+### Platform Website
+
+- Open `http://localhost:3000/platform.html` to use the enterprise web form backed by Turso.
 
 ## API Documentation
 
@@ -120,7 +154,7 @@ Content-Type: application/json
 {
   "prompt": "Write a short story about AI",
   "options": {
-    "model": "gpt-3.5-turbo",
+    "model": "gemini-pro-3",
     "maxTokens": 500,
     "temperature": 0.7
   }
@@ -172,6 +206,37 @@ GET /api/data?page=1&limit=10&type=csv
 Authorization: Bearer <token>
 ```
 
+### Organization Management
+
+#### Get Current Organization
+```http
+GET /api/organizations/me
+Authorization: Bearer <token>
+```
+
+#### Update Organization Plan
+```http
+PUT /api/organizations/me/plan
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "plan": "enterprise"
+}
+```
+
+#### Add Organization Member
+```http
+POST /api/organizations/me/members
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "userId": "<existing-user-id>",
+  "role": "admin"
+}
+```
+
 ### Conversations
 
 #### Create Conversation
@@ -183,7 +248,7 @@ Content-Type: application/json
 {
   "title": "AI Discussion",
   "settings": {
-    "model": "gpt-4",
+    "model": "gemini-pro-3",
     "temperature": 0.8,
     "systemPrompt": "You are a helpful AI assistant."
   }
@@ -212,11 +277,12 @@ NODE_ENV=development
 HOST=localhost
 
 # Database
-DATABASE_URL=mongodb://localhost:27017/alphaxai
+TURSO_DATABASE_URL=libsql://ash-brady-sixscripts-ai.aws-us-west-2.turso.io
+TURSO_AUTH_TOKEN=your_turso_auth_token
 REDIS_URL=redis://localhost:6379
 
 # AI Services
-OPENAI_API_KEY=your_openai_api_key
+GEMINI_API_KEY=your_gemini_api_key
 HUGGINGFACE_API_KEY=your_huggingface_api_key
 ANTHROPIC_API_KEY=your_anthropic_api_key
 

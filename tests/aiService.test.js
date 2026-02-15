@@ -9,15 +9,15 @@ describe('AI Service', () => {
   });
 
   describe('generateText', () => {
-    test('should handle missing OpenAI client', async () => {
+    test('should handle missing Gemini client', async () => {
       // Temporarily disable the client
-      const originalClient = aiService.openaiClient;
-      aiService.openaiClient = null;
+      const originalClient = aiService.geminiClient;
+      aiService.geminiClient = null;
 
-      await expect(aiService.generateText('test prompt')).rejects.toThrow('OpenAI client not initialized');
+      await expect(aiService.generateText('test prompt')).rejects.toThrow('Gemini client not initialized');
 
       // Restore the client
-      aiService.openaiClient = originalClient;
+      aiService.geminiClient = originalClient;
     });
 
     test('should return error structure on failure', async () => {
@@ -28,13 +28,13 @@ describe('AI Service', () => {
   });
 
   describe('generateEmbedding', () => {
-    test('should handle missing OpenAI client', async () => {
-      const originalClient = aiService.openaiClient;
-      aiService.openaiClient = null;
+    test('should handle missing Gemini client', async () => {
+      const originalClient = aiService.geminiClient;
+      aiService.geminiClient = null;
 
-      await expect(aiService.generateEmbedding('test text')).rejects.toThrow('OpenAI client not initialized');
+      await expect(aiService.generateEmbedding('test text')).rejects.toThrow('Gemini client not initialized');
 
-      aiService.openaiClient = originalClient;
+      aiService.geminiClient = originalClient;
     });
   });
 

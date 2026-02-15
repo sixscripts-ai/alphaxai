@@ -1,126 +1,142 @@
 const crypto = require('crypto');
-const User = require('../models/User');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const config = require('../../config');
+const {
+  findUserByEmail,
+  createUser,
+  updateUser,
+  findOrganizationBySlug,
+  createOrganization,
+  updateOrganization,
+  getOrganizationById,
+  getUserById,
+  findUserByResetToken
+} = require('../repositories/tursoRepository');
 const { asyncHandler } = require('../middleware/errorMiddleware');
 const logger = require('../utils/logger');
 
-// @desc    Register user
-// @route   POST /api/auth/register
-// @access  Public
-const register = asyncHandler(async (req, res) => {
-  const { name, email, password, role } = req.body;
+const signToken = (userId) => jwt.sign({ id: userId }, config.auth.jwt.secret, { expiresIn: config.auth.jwt.expiresIn });
 
-  // Check if user exists
-  const userExists = await User.findOne({ email });
-  if (userExists) {
-    return res.status(400).json({
-      success: false,
-      error: 'User already exists'
-    });
+const sanitizeUser = (user) => {
+  if (!user) return null;
+  const safeUser = { ...user };
+  delete safeUser.password;
+  return safeUser;
+};
+
+const createOrganizationSlug = async (seed) => {
+  const base = seed.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'workspace';
+  let suffix = 0;
+  let slug = base;
+
+  while (await findOrganizationBySlug(slug)) {
+    suffix += 1;
+    slug = `${base}-${suffix}`;
   }
 
-  // Create user
-  const user = await User.create({
+  return slug;
+};
+
+const register = asyncHandler(async (req, res) => {
+  const { name, email, password, companyName } = req.body;
+  if (!name || !email || !password) {
+    return res.status(400).json({ success: false, error: 'Please provide name, email, and password' });
+  }
+
+  const normalizedEmail = String(email).toLowerCase();
+  const userExists = await findUserByEmail(normalizedEmail);
+  if (userExists) {
+    return res.status(400).json({ success: false, error: 'User already exists' });
+  }
+
+  const organizationName = companyName || `${name}'s Workspace`;
+  const organization = await createOrganization({ name: organizationName, slug: await createOrganizationSlug(organizationName), plan: 'starter' });
+  const passwordHash = await bcrypt.hash(password, config.auth.bcrypt.rounds);
+
+  const user = await createUser({
     name,
-    email,
-    password,
-    role: role || 'user'
+    email: normalizedEmail,
+    passwordHash,
+    role: 'user',
+    organization: organization.id,
+    organizationRole: 'owner'
   });
 
-  // Generate token
-  const token = user.getSignedJwtToken();
+  await updateOrganization(organization.id, { owner: user.id });
 
+  const token = signToken(user.id);
   logger.info(`User registered: ${user.email}`);
 
-  res.status(201).json({
+  return res.status(201).json({
     success: true,
     token,
     data: {
-      id: user._id,
+      id: user.id,
       name: user.name,
       email: user.email,
-      role: user.role
+      role: user.role,
+      organization: {
+        id: organization.id,
+        name: organization.name,
+        slug: organization.slug,
+        plan: organization.plan
+      }
     }
   });
 });
 
-// @desc    Login user
-// @route   POST /api/auth/login
-// @access  Public
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-
-  // Validate email & password
   if (!email || !password) {
-    return res.status(400).json({
-      success: false,
-      error: 'Please provide an email and password'
-    });
+    return res.status(400).json({ success: false, error: 'Please provide an email and password' });
   }
 
-  // Check for user
-  const user = await User.findOne({ email }).select('+password');
+  const user = await findUserByEmail(email, true);
   if (!user) {
-    return res.status(401).json({
-      success: false,
-      error: 'Invalid credentials'
-    });
+    return res.status(401).json({ success: false, error: 'Invalid credentials' });
   }
 
-  // Check if password matches
-  const isMatch = await user.matchPassword(password);
+  const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
-    return res.status(401).json({
-      success: false,
-      error: 'Invalid credentials'
-    });
+    return res.status(401).json({ success: false, error: 'Invalid credentials' });
   }
 
-  // Update last login
-  user.lastLoginAt = new Date();
-  await user.save();
-
-  // Generate token
-  const token = user.getSignedJwtToken();
-
+  await updateUser(user.id, { lastLoginAt: new Date().toISOString() });
+  const token = signToken(user.id);
   logger.info(`User logged in: ${user.email}`);
 
-  res.status(200).json({
+  return res.status(200).json({
     success: true,
     token,
     data: {
-      id: user._id,
+      id: user.id,
       name: user.name,
       email: user.email,
-      role: user.role
+      role: user.role,
+      organization: user.organization,
+      organizationRole: user.organizationRole
     }
   });
 });
 
-// @desc    Log user out / clear cookie
-// @route   POST /api/auth/logout
-// @access  Private
-const logout = asyncHandler(async (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'User logged out successfully'
-  });
+const logout = asyncHandler(async (_req, res) => {
+  res.status(200).json({ success: true, message: 'User logged out successfully' });
 });
 
-// @desc    Get current logged in user
-// @route   GET /api/auth/me
-// @access  Private
 const getMe = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user.id);
+  const user = await getUserById(req.user.id);
+  const organization = user?.organization ? await getOrganizationById(user.organization) : null;
 
-  res.status(200).json({
+  return res.status(200).json({
     success: true,
-    data: user
+    data: {
+      ...sanitizeUser(user),
+      organization
+    }
   });
 });
 
-// @desc    Update user profile
-// @route   PUT /api/auth/update-profile
-// @access  Private
 const updateProfile = asyncHandler(async (req, res) => {
   const fieldsToUpdate = {
     name: req.body.name,
@@ -128,90 +144,54 @@ const updateProfile = asyncHandler(async (req, res) => {
     preferences: req.body.preferences
   };
 
-  const user = await User.findByIdAndUpdate(req.user.id, fieldsToUpdate, {
-    new: true,
-    runValidators: true
-  });
+  const user = await updateUser(req.user.id, fieldsToUpdate);
 
-  res.status(200).json({
+  return res.status(200).json({
     success: true,
-    data: user
+    data: sanitizeUser(user)
   });
 });
 
-// @desc    Forgot password
-// @route   POST /api/auth/forgot-password
-// @access  Public
 const forgotPassword = asyncHandler(async (req, res) => {
-  const user = await User.findOne({ email: req.body.email });
+  const user = await findUserByEmail(req.body.email, true);
 
   if (!user) {
-    return res.status(404).json({
-      success: false,
-      error: 'There is no user with that email'
-    });
+    return res.status(404).json({ success: false, error: 'There is no user with that email' });
   }
 
-  // Get reset token
   const resetToken = crypto.randomBytes(20).toString('hex');
+  const passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+  const passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-  // Hash token and set to resetPasswordToken field
-  user.passwordResetToken = crypto
-    .createHash('sha256')
-    .update(resetToken)
-    .digest('hex');
-
-  // Set expire
-  user.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
-
-  await user.save({ validateBeforeSave: false });
+  await updateUser(user.id, { passwordResetToken, passwordResetExpires });
 
   logger.info(`Password reset requested for: ${user.email}`);
-
-  res.status(200).json({
+  return res.status(200).json({
     success: true,
     message: 'Password reset token generated',
-    resetToken // In production, send this via email
+    resetToken
   });
 });
 
-// @desc    Reset password
-// @route   PUT /api/auth/reset-password/:resettoken
-// @access  Public
 const resetPassword = asyncHandler(async (req, res) => {
-  // Get hashed token
-  const resetPasswordToken = crypto
-    .createHash('sha256')
-    .update(req.params.resettoken)
-    .digest('hex');
-
-  const user = await User.findOne({
-    passwordResetToken: resetPasswordToken,
-    passwordResetExpires: { $gt: Date.now() }
-  });
+  const resetPasswordToken = crypto.createHash('sha256').update(req.params.resettoken).digest('hex');
+  const user = await findUserByResetToken(resetPasswordToken);
 
   if (!user) {
-    return res.status(400).json({
-      success: false,
-      error: 'Invalid token'
-    });
+    return res.status(400).json({ success: false, error: 'Invalid token' });
   }
 
-  // Set new password
-  user.password = req.body.password;
-  user.passwordResetToken = undefined;
-  user.passwordResetExpires = undefined;
-  await user.save();
+  const passwordHash = await bcrypt.hash(req.body.password, config.auth.bcrypt.rounds);
+  await updateUser(user.id, {
+    passwordHash,
+    passwordResetToken: null,
+    passwordResetExpires: null
+  });
 
-  // Generate token
-  const token = user.getSignedJwtToken();
-
+  const token = signToken(user.id);
   logger.info(`Password reset successful for: ${user.email}`);
 
-  res.status(200).json({
-    success: true,
-    token
-  });
+  return res.status(200).json({ success: true, token });
 });
 
 module.exports = {
