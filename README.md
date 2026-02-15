@@ -1,328 +1,448 @@
-# AlphaX AI - Advanced AI Platform
+# StartupCRM - AI-Powered CRM for Startup Founders 🚀
 
-AlphaX AI is a comprehensive artificial intelligence platform that provides powerful AI capabilities including text generation, image analysis, data processing, and conversation management. Built with Node.js, Express, and MongoDB.
+An intelligent CRM application designed specifically for startup founders, featuring Google Gemini Pro integration for AI-powered inventory automation, data analysis, and agentic tool calling capabilities.
 
-## Features
+## ✨ Key Features
 
-### 🤖 AI Capabilities
-- **Text Generation**: Advanced text generation using OpenAI GPT models
-- **Image Analysis**: Intelligent image analysis and description
-- **Text Classification**: Automated text classification with customizable labels
-- **Text Summarization**: Intelligent text summarization
-- **Embedding Generation**: Text embedding generation for semantic search
+### 🤖 AI-Powered Intelligence (Google Gemini Pro)
+- **Automated Data Analysis**: Real-time insights on sales pipeline health and performance
+- **Lead Scoring**: AI-driven lead qualification and prioritization
+- **Deal Probability Prediction**: Win probability analysis with risk factors
+- **Inventory Forecasting**: Automated demand prediction and reorder recommendations
+- **Personalized Email Generation**: AI-generated personalized outreach emails
+- **Agentic Tool Calling**: Execute complex tasks via natural language commands
 
-### 💬 Conversation Management
-- **Multi-turn Conversations**: Persistent conversation history
-- **Customizable AI Settings**: Temperature, max tokens, system prompts
-- **Conversation Analytics**: Token usage and cost tracking
-- **Export/Import**: Conversation backup and restore
+### 👥 Contact Management
+- Complete contact lifecycle management (leads → prospects → customers)
+- Custom fields and tags for flexible organization
+- Social profile integration (LinkedIn, Twitter, etc.)
+- AI-powered contact scoring and insights
+- Follow-up scheduling and reminders
 
-### 📊 Data Processing
-- **Multi-format Support**: CSV, JSON, TXT, PDF, images
-- **Data Analysis**: Automated data profiling and statistics
-- **Data Preprocessing**: Cleaning, validation, and transformation
-- **Visualization**: Data insights and charts
+### 💼 Sales Pipeline
+- Visual pipeline stages (prospecting → closed won/lost)
+- Deal tracking with probability analysis
+- Activity logging (calls, emails, meetings, notes)
+- Revenue forecasting with AI predictions
+- Custom deal stages and workflows
 
-### 🔐 Security & Authentication
-- **JWT Authentication**: Secure token-based authentication
-- **Role-based Access**: User, moderator, and admin roles
-- **Rate Limiting**: API request rate limiting
-- **Input Validation**: Comprehensive input validation and sanitization
+### 📦 Inventory Management
+- Real-time stock tracking with SKU management
+- Automated reorder point alerts
+- AI-powered demand forecasting
+- Supplier management integration
+- Stock history and audit trails
+- Cost and pricing analysis
 
-### 🚀 Performance & Scalability
-- **Docker Support**: Containerized deployment
-- **Database Optimization**: MongoDB with optimized queries
-- **Caching**: Redis-based caching for improved performance
-- **Load Balancing**: Nginx reverse proxy configuration
+### 🎯 Agentic Tools & Skills
+- Search and query contacts with natural language
+- Automated inventory updates
+- Deal creation and management
+- Follow-up scheduling automation
+- Custom report generation
+- Multi-step workflow automation
 
-## Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 16+ 
+- Node.js 16+
 - MongoDB 5+
-- Redis 6+ (optional)
-- Docker (optional)
+- Google Gemini API Key
 
 ### Installation
 
-1. **Clone the repository**
+1. **Clone and setup**
    ```bash
    git clone https://github.com/sixscripts-ai/alphaxai.git
    cd alphaxai
-   ```
-
-2. **Install dependencies**
-   ```bash
    npm install
    ```
 
-3. **Environment Configuration**
+2. **Configure Environment**
+   Create a `.env` file with:
    ```bash
-   cp .env.example .env
-   # Edit .env with your configuration
+   # Server
+   PORT=3000
+   NODE_ENV=development
+   
+   # Database
+   DATABASE_URL=mongodb://localhost:27017/startupcrm
+   
+   # Google Gemini Pro API
+   GEMINI_API_KEY=your_gemini_api_key_here
+   
+   # Authentication
+   JWT_SECRET=your_super_secret_jwt_key
+   JWT_EXPIRES_IN=7d
    ```
 
-4. **Start the application**
+3. **Start the application**
    ```bash
-   # Development mode
-   npm run dev
-
-   # Production mode
    npm start
    ```
 
-### Docker Deployment
+4. **Access the CRM**
+   Open your browser to `http://localhost:3000`
 
-```bash
-# Build and run with Docker Compose
-docker-compose up -d
+## 📊 API Documentation
 
-# Or build manually
-docker build -t alphaxai .
-docker run -p 3000:3000 alphaxai
-```
+### CRM Endpoints
 
-## API Documentation
-
-### Authentication
-
-#### Register a new user
+#### Dashboard
 ```http
-POST /api/auth/register
-Content-Type: application/json
-
-{
-  "name": "John Doe",
-  "email": "john@example.com",
-  "password": "password123"
-}
+GET /api/crm/dashboard
+Authorization: Bearer <token>
 ```
+Returns comprehensive dashboard statistics including contacts, deals, and inventory metrics.
 
-#### Login
+#### AI Insights
 ```http
-POST /api/auth/login
-Content-Type: application/json
-
-{
-  "email": "john@example.com",
-  "password": "password123"
-}
+GET /api/crm/insights
+Authorization: Bearer <token>
 ```
+Get AI-powered insights and recommendations for your business.
 
-### AI Endpoints
+### Contact Management
 
-#### Generate Text
+#### Create Contact
 ```http
-POST /api/ai/generate/text
+POST /api/crm/contacts
 Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "prompt": "Write a short story about AI",
-  "options": {
-    "model": "gpt-3.5-turbo",
-    "maxTokens": 500,
-    "temperature": 0.7
+  "firstName": "John",
+  "lastName": "Doe",
+  "email": "john@example.com",
+  "company": "TechStartup Inc",
+  "position": "CEO",
+  "status": "lead",
+  "phone": "+1234567890"
+}
+```
+
+#### Get Contacts
+```http
+GET /api/crm/contacts?status=lead&page=1&limit=20
+Authorization: Bearer <token>
+```
+
+#### Score Leads with AI
+```http
+POST /api/crm/contacts/score
+Authorization: Bearer <token>
+```
+Uses Google Gemini Pro to analyze and score all leads (0-100).
+
+#### Generate Personalized Email
+```http
+POST /api/crm/contacts/generate-email
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "contactId": "contact_id_here",
+  "context": "Product launch announcement"
+}
+```
+
+### Deal Management
+
+#### Create Deal
+```http
+POST /api/crm/deals
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "contactId": "contact_id",
+  "title": "Enterprise License",
+  "value": 50000,
+  "stage": "prospecting",
+  "expectedCloseDate": "2024-12-31"
+}
+```
+
+#### Get Deals
+```http
+GET /api/crm/deals?stage=prospecting
+Authorization: Bearer <token>
+```
+
+#### Analyze Deal with AI
+```http
+POST /api/crm/deals/:id/analyze
+Authorization: Bearer <token>
+```
+Returns AI-powered win probability, risk factors, and recommendations.
+
+### Inventory Management
+
+#### Get Inventory
+```http
+GET /api/crm/inventory?status=low_stock
+Authorization: Bearer <token>
+```
+
+#### Create Inventory Item
+```http
+POST /api/crm/inventory
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "sku": "PROD-001",
+  "name": "Premium Widget",
+  "quantity": 100,
+  "unitPrice": 29.99,
+  "reorderPoint": 20,
+  "reorderQuantity": 50
+}
+```
+
+#### AI Inventory Predictions
+```http
+POST /api/crm/inventory/predict
+Authorization: Bearer <token>
+```
+Generates AI-powered demand forecasts and reorder recommendations.
+
+### Agentic Tools
+
+#### Execute Tool
+```http
+POST /api/crm/agent/execute
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "toolName": "search_contacts",
+  "parameters": {
+    "query": "tech companies in San Francisco",
+    "filters": {"status": "lead"}
   }
 }
 ```
 
-#### Analyze Image
-```http
-POST /api/ai/analyze/image
-Authorization: Bearer <token>
-Content-Type: application/json
+Available tools:
+- `search_contacts` - Search for contacts with filters
+- `update_inventory` - Update inventory quantities
+- `create_deal` - Create new deals
+- `schedule_followup` - Schedule follow-up tasks
+- `generate_report` - Generate analytics reports
 
-{
-  "imageUrl": "https://example.com/image.jpg",
-  "prompt": "Describe what you see in this image"
-}
+## 🧠 AI Features Powered by Google Gemini Pro
+
+### 1. CRM Data Analysis
+Analyzes your entire CRM database to provide:
+- Sales pipeline health metrics
+- Conversion rate optimization recommendations
+- Priority contact identification
+- Revenue forecasting
+- Risk and opportunity detection
+
+### 2. Lead Scoring
+Intelligent lead qualification based on:
+- Engagement level
+- Company size and industry
+- Deal value potential
+- Historical conversion patterns
+
+### 3. Inventory Automation
+AI-driven inventory management:
+- 30-day demand forecasting
+- Optimal reorder timing
+- Quantity optimization
+- Stockout risk prediction
+- Cost optimization suggestions
+
+### 4. Deal Intelligence
+Win probability analysis considering:
+- Deal stage and timeline
+- Contact engagement history
+- Historical win rates
+- Risk factor identification
+
+### 5. Agentic Tool Calling
+Natural language task execution:
+- Complex multi-step workflows
+- Automated data operations
+- Smart query processing
+- Context-aware recommendations
+
+## 🏗️ Architecture
+
+```
+startupcrm/
+├── src/
+│   ├── models/           # Database models
+│   │   ├── Contact.js    # Contact model with AI insights
+│   │   ├── Deal.js       # Deal model with predictions
+│   │   ├── Inventory.js  # Inventory with forecasting
+│   │   └── User.js       # User authentication
+│   ├── controllers/      # Route controllers
+│   │   └── crmController.js  # CRM business logic
+│   ├── services/         # Business services
+│   │   └── geminiService.js  # Google Gemini Pro integration
+│   ├── routes/          # API routes
+│   │   └── crm.js       # CRM endpoints
+│   └── middleware/      # Express middleware
+├── public/              # Frontend assets
+│   └── crm.html        # Beautiful CRM interface
+└── index.js            # Application entry point
 ```
 
-#### Classify Text
-```http
-POST /api/ai/classify/text
-Authorization: Bearer <token>
-Content-Type: application/json
+## 🎨 User Interface
 
-{
-  "text": "This movie was amazing!",
-  "labels": ["positive", "negative", "neutral"]
-}
-```
+The CRM features a modern, responsive interface with:
+- **Dashboard**: Real-time metrics and AI insights
+- **Contact List**: Searchable, filterable contact management
+- **Pipeline View**: Visual drag-and-drop sales pipeline
+- **Inventory Grid**: Stock management with status indicators
+- **AI Tools Panel**: Execute agentic tools with natural language
 
-### Data Management
+## 🔒 Security Features
 
-#### Upload Dataset
-```http
-POST /api/data/upload
-Authorization: Bearer <token>
-Content-Type: multipart/form-data
+- JWT-based authentication
+- Role-based access control
+- Rate limiting on API endpoints
+- Input validation and sanitization
+- Secure environment variable management
+- Helmet.js security headers
 
-Form data:
-- dataset: [file]
-- name: "My Dataset"
-- description: "Sample dataset for analysis"
-- tags: "ml,training,data"
-```
+## 📈 Use Cases for Startup Founders
 
-#### Get Datasets
-```http
-GET /api/data?page=1&limit=10&type=csv
-Authorization: Bearer <token>
-```
+### Early Stage Startups
+- Track initial customer conversations
+- Manage pilot program participants
+- Forecast first inventory orders
+- Prioritize high-value leads
 
-### Conversations
+### Growth Stage
+- Scale sales operations with AI insights
+- Optimize inventory based on demand patterns
+- Automate repetitive tasks with agentic tools
+- Data-driven decision making
 
-#### Create Conversation
-```http
-POST /api/ai/conversations
-Authorization: Bearer <token>
-Content-Type: application/json
+### Series A+
+- Advanced pipeline analytics
+- Multi-channel customer engagement
+- Predictive inventory management
+- Custom workflow automation
 
-{
-  "title": "AI Discussion",
-  "settings": {
-    "model": "gpt-4",
-    "temperature": 0.8,
-    "systemPrompt": "You are a helpful AI assistant."
-  }
-}
-```
+## 🛠️ Technology Stack
 
-#### Chat in Conversation
-```http
-POST /api/ai/conversations/{id}/chat
-Authorization: Bearer <token>
-Content-Type: application/json
+- **Backend**: Node.js, Express.js
+- **Database**: MongoDB with Mongoose
+- **AI**: Google Gemini Pro (1.5 Pro Latest)
+- **Authentication**: JWT with bcrypt
+- **Frontend**: Vanilla JavaScript with modern CSS
+- **Security**: Helmet, rate limiting, input validation
 
-{
-  "message": "Hello, how can you help me today?"
-}
-```
-
-## Configuration
-
-### Environment Variables
+## 📝 Environment Variables
 
 ```bash
 # Server Configuration
 PORT=3000
-NODE_ENV=development
-HOST=localhost
+NODE_ENV=production
+HOST=0.0.0.0
 
 # Database
-DATABASE_URL=mongodb://localhost:27017/alphaxai
+DATABASE_URL=mongodb://localhost:27017/startupcrm
 REDIS_URL=redis://localhost:6379
 
-# AI Services
-OPENAI_API_KEY=your_openai_api_key
-HUGGINGFACE_API_KEY=your_huggingface_api_key
-ANTHROPIC_API_KEY=your_anthropic_api_key
+# Google Gemini Pro API
+GEMINI_API_KEY=your_gemini_api_key_here
 
 # Authentication
-JWT_SECRET=your_super_secret_jwt_key
+JWT_SECRET=your_super_secret_jwt_key_here
 JWT_EXPIRES_IN=7d
 BCRYPT_ROUNDS=12
 
-# File Upload
+# File Upload (Optional)
 MAX_FILE_SIZE=104857600
 UPLOAD_PATH=./uploads
 
 # Logging
 LOG_LEVEL=info
-LOG_FILENAME=logs/alphaxai.log
-
-# Email (optional)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your_email
-SMTP_PASS=your_password
-EMAIL_FROM=noreply@alphaxai.com
+LOG_FILENAME=logs/startupcrm.log
 ```
 
-## Development
+## 🤝 Getting Your Gemini API Key
 
-### Available Scripts
+1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Sign in with your Google account
+3. Click "Get API Key"
+4. Create a new API key or use an existing one
+5. Copy the key and add it to your `.env` file
 
+## 🚀 Deployment
+
+### Docker Deployment
 ```bash
-# Development with auto-reload
-npm run dev
-
-# Run tests
-npm test
-npm run test:watch
-npm run test:coverage
-
-# Linting
-npm run lint
-npm run lint:fix
-
-# Build and test
-npm run build
-
-# Docker operations
-npm run docker:build
-npm run docker:run
+docker build -t startupcrm .
+docker run -p 3000:3000 --env-file .env startupcrm
 ```
 
-### Project Structure
+### Production Checklist
+- [ ] Set strong JWT_SECRET
+- [ ] Configure production DATABASE_URL
+- [ ] Add GEMINI_API_KEY
+- [ ] Set NODE_ENV=production
+- [ ] Enable SSL/TLS
+- [ ] Configure proper CORS origins
+- [ ] Set up monitoring and logging
+- [ ] Configure backup strategy
 
-```
-alphaxai/
-├── src/
-│   ├── controllers/        # Route controllers
-│   ├── middleware/         # Express middleware
-│   ├── models/            # Database models
-│   ├── routes/            # API routes
-│   ├── services/          # Business logic services
-│   └── utils/             # Utility functions
-├── config/                # Configuration files
-├── tests/                 # Test files
-├── public/                # Static files
-├── uploads/               # File uploads
-├── logs/                  # Application logs
-├── docs/                  # Documentation
-├── frontend/              # Frontend components
-└── scripts/               # Utility scripts
-```
+## 📚 Additional Resources
 
-## Testing
+- [Google Gemini API Documentation](https://ai.google.dev/docs)
+- [MongoDB Best Practices](https://www.mongodb.com/docs/manual/administration/production-notes/)
+- [Express.js Security Best Practices](https://expressjs.com/en/advanced/best-practice-security.html)
 
-The application includes comprehensive tests covering:
+## 🐛 Troubleshooting
 
-- API endpoints
-- Database models
-- Business logic
-- Utility functions
-- Integration tests
+### Gemini API Errors
+- Verify your API key is valid and active
+- Check API quota and rate limits
+- Ensure proper request formatting
 
-```bash
-# Run all tests
-npm test
+### Database Connection Issues
+- Verify MongoDB is running
+- Check DATABASE_URL format
+- Ensure network connectivity
 
-# Run tests with coverage
-npm run test:coverage
+### Authentication Problems
+- Verify JWT_SECRET is set
+- Check token expiration settings
+- Validate user credentials
 
-# Run tests in watch mode
-npm run test:watch
-```
+## 📄 License
 
-## Security
+MIT License - feel free to use this for your startup!
 
-- **Input Validation**: All inputs are validated and sanitized
-- **Rate Limiting**: API endpoints are rate-limited to prevent abuse
-- **Authentication**: JWT-based authentication with secure token handling
-- **Authorization**: Role-based access control
-- **Data Protection**: Sensitive data is encrypted and securely stored
-- **Security Headers**: Helmet.js for security headers
+## 💡 Future Enhancements
 
-## License
+- [ ] Multi-user collaboration
+- [ ] Email integration (Gmail, Outlook)
+- [ ] Calendar synchronization
+- [ ] Mobile app (React Native)
+- [ ] Advanced reporting dashboard
+- [ ] Webhook integrations
+- [ ] Custom AI model training
+- [ ] Voice command support
 
-This project is licensed under the MIT License.
+## 🤖 About Google Gemini Pro Integration
 
-## Support
+This CRM leverages Google's most advanced AI model (Gemini 1.5 Pro) for:
+- **Natural Language Understanding**: Process complex queries
+- **Multi-turn Conversations**: Context-aware interactions
+- **Function Calling**: Execute tools based on intent
+- **Large Context Window**: Analyze extensive datasets
+- **Fast Response Times**: Real-time insights
 
-For support and questions:
-- Create an issue on GitHub
-- Documentation: Available in the `/docs` directory
+---
+
+Built with ❤️ for startup founders who want to work smarter, not harder.
+
+**Ready to supercharge your startup's growth with AI?** Get started now!
