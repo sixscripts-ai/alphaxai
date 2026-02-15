@@ -15,6 +15,7 @@ const authRoutes = require('./src/routes/auth');
 const aiRoutes = require('./src/routes/ai');
 const userRoutes = require('./src/routes/user');
 const dataRoutes = require('./src/routes/data');
+const crmRoutes = require('./src/routes/crm');
 
 const app = express();
 const PORT = config.server.port;
