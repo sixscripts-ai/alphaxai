@@ -6,14 +6,15 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "seed": "node scripts/seedData.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "build": "npm run lint && npm test",
-    "docker:build": "docker build -t alphaxai .",
-    "docker:run": "docker run -p 3000:3000 alphaxai"
+    "docker:build": "docker build -t startupcrm .",
+    "docker:run": "docker run -p 3000:3000 startupcrm"
   },
   "keywords": [
     "crm",
