@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StartupCRM - AI-Powered CRM Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .content-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .section-header h2 {
+            color: #333;
+            font-size: 1.8em;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            box-shadow: none;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .data-table th {
+            background: #f8f9fa;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .data-table td {
+            padding: 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .badge-lead { background: #ffeaa7; color: #2d3436; }
+        .badge-qualified { background: #74b9ff; color: #2d3436; }
+        .badge-customer { background: #55efc4; color: #2d3436; }
+        .badge-lost { background: #ff7675; color: white; }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .feature-card {
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            padding: 25px;
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+        }
+
+        .feature-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .feature-card p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .feature-icon {
+            font-size: 2em;
+            margin-bottom: 15px;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 StartupCRM</h1>
+            <p>AI-Powered CRM for Startup Founders with Google Gemini Pro</p>
+        </div>
+
+        <div id="alert-container"></div>
+
+        <!-- Stats Dashboard -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="total-contacts">-</div>
+                <div class="stat-label">Total Contacts</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="total-deals">-</div>
+                <div class="stat-label">Active Deals</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="total-revenue">$0</div>
+                <div class="stat-label">Total Revenue</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="inventory-items">-</div>
+                <div class="stat-label">Inventory Items</div>
+            </div>
+        </div>
+
+        <!-- AI Features Showcase -->
+        <div class="content-section">
+            <h2>🤖 AI-Powered Features</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Lead Scoring</h3>
+                    <p>Automatic 0-100 lead scoring with AI-powered insights and reasoning</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💼</div>
+                    <h3>Deal Analysis</h3>
+                    <p>Win probability predictions with risk factors and recommendations</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📦</div>
+                    <h3>Inventory Forecasting</h3>
+                    <p>30-day demand predictions for intelligent stock management</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">✉️</div>
+                    <h3>Email Generation</h3>
+                    <p>Personalized outreach emails generated by AI for each contact</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>CRM Analytics</h3>
+                    <p>Deep insights and recommendations from your CRM data</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🛠️</div>
+                    <h3>Agentic Tools</h3>
+                    <p>Execute complex tasks via natural language commands</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contacts Section -->
+        <div class="content-section">
+            <div class="section-header">
+                <h2>👥 Recent Contacts</h2>
+                <button class="btn" onclick="loadContacts()">🔄 Refresh</button>
+            </div>
+            <div id="contacts-container">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading contacts...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Deals Section -->
+        <div class="content-section">
+            <div class="section-header">
+                <h2>💼 Active Deals</h2>
+                <button class="btn" onclick="loadDeals()">🔄 Refresh</button>
+            </div>
+            <div id="deals-container">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading deals...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventory Section -->
+        <div class="content-section">
+            <div class="section-header">
+                <h2>📦 Inventory</h2>
+                <button class="btn" onclick="loadInventory()">🔄 Refresh</button>
+            </div>
+            <div id="inventory-container">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading inventory...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Information -->
+        <div class="content-section">
+            <h2>📡 API Endpoints</h2>
+            <p style="margin-bottom: 15px; color: #666;">Access the CRM via REST API:</p>
+            <ul style="color: #666; line-height: 2;">
+                <li><code>GET /api/crm/dashboard</code> - Dashboard statistics</li>
+                <li><code>GET /api/crm/contacts</code> - List all contacts</li>
+                <li><code>GET /api/crm/deals</code> - List all deals</li>
+                <li><code>GET /api/crm/inventory</code> - List inventory items</li>
+                <li><code>POST /api/crm/contacts/score</code> - AI lead scoring</li>
+                <li><code>POST /api/crm/deals/:id/analyze</code> - AI deal analysis</li>
+                <li><code>POST /api/crm/inventory/predict</code> - AI inventory predictions</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/crm';
+
+        async function fetchAPI(endpoint) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`);
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('API Error:', error);
+                return null;
+            }
+        }
+
+        function showAlert(message, type = 'success') {
+            const container = document.getElementById('alert-container');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            container.appendChild(alert);
+            setTimeout(() => alert.remove(), 5000);
+        }
+
+        async function loadDashboard() {
+            const data = await fetchAPI('/dashboard');
+            if (data && data.success) {
+                const stats = data.data.stats;
+                document.getElementById('total-contacts').textContent = stats.totalContacts;
+                document.getElementById('total-deals').textContent = stats.totalDeals;
+                document.getElementById('total-revenue').textContent = '$' + (stats.totalRevenue || 0).toLocaleString();
+                document.getElementById('inventory-items').textContent = stats.inventoryItems;
+            }
+        }
+
+        async function loadContacts() {
+            const container = document.getElementById('contacts-container');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading contacts...</p></div>';
+            
+            const data = await fetchAPI('/contacts?limit=10');
+            if (data && data.success) {
+                const contacts = data.data;
+                if (contacts.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No contacts found. Add sample data using the seeding script.</p>';
+                    return;
+                }
+                
+                let html = '<table class="data-table"><thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Status</th><th>Score</th><th>Value</th></tr></thead><tbody>';
+                contacts.forEach(contact => {
+                    html += `
+                        <tr>
+                            <td><strong>${contact.name}</strong></td>
+                            <td>${contact.email}</td>
+                            <td>${contact.company || '-'}</td>
+                            <td><span class="badge badge-${contact.status}">${contact.status}</span></td>
+                            <td>${contact.score || 0}/100</td>
+                            <td>$${(contact.value || 0).toLocaleString()}</td>
+                        </tr>
+                    `;
+                });
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = '<p style="text-align: center; color: #ff7675; padding: 20px;">Failed to load contacts</p>';
+            }
+        }
+
+        async function loadDeals() {
+            const container = document.getElementById('deals-container');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading deals...</p></div>';
+            
+            const data = await fetchAPI('/deals?limit=10');
+            if (data && data.success) {
+                const deals = data.data;
+                if (deals.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No deals found. Add sample data using the seeding script.</p>';
+                    return;
+                }
+                
+                let html = '<table class="data-table"><thead><tr><th>Title</th><th>Amount</th><th>Stage</th><th>Probability</th><th>Expected Close</th></tr></thead><tbody>';
+                deals.forEach(deal => {
+                    html += `
+                        <tr>
+                            <td><strong>${deal.title}</strong></td>
+                            <td>$${(deal.amount || 0).toLocaleString()}</td>
+                            <td>${deal.stage}</td>
+                            <td>${deal.probability || 0}%</td>
+                            <td>${deal.expected_close_date || '-'}</td>
+                        </tr>
+                    `;
+                });
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = '<p style="text-align: center; color: #ff7675; padding: 20px;">Failed to load deals</p>';
+            }
+        }
+
+        async function loadInventory() {
+            const container = document.getElementById('inventory-container');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading inventory...</p></div>';
+            
+            const data = await fetchAPI('/inventory?limit=10');
+            if (data && data.success) {
+                const items = data.data;
+                if (items.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No inventory items found. Add sample data using the seeding script.</p>';
+                    return;
+                }
+                
+                let html = '<table class="data-table"><thead><tr><th>SKU</th><th>Name</th><th>Category</th><th>Quantity</th><th>Cost</th><th>Price</th><th>Supplier</th></tr></thead><tbody>';
+                items.forEach(item => {
+                    const lowStock = item.quantity <= item.min_quantity;
+                    html += `
+                        <tr style="${lowStock ? 'background: #fff3cd;' : ''}">
+                            <td><strong>${item.sku}</strong></td>
+                            <td>${item.name}</td>
+                            <td>${item.category}</td>
+                            <td>${item.quantity}${lowStock ? ' ⚠️' : ''}</td>
+                            <td>$${(item.cost || 0).toFixed(2)}</td>
+                            <td>$${(item.price || 0).toFixed(2)}</td>
+                            <td>${item.supplier || '-'}</td>
+                        </tr>
+                    `;
+                });
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = '<p style="text-align: center; color: #ff7675; padding: 20px;">Failed to load inventory</p>';
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadDashboard();
+            loadContacts();
+            loadDeals();
+            loadInventory();
+        });
+    </script>
+</body>
+</html>
