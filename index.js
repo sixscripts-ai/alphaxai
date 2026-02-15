@@ -45,17 +45,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/data', dataRoutes);
-app.use('/api/crm', crmRoutes);
 
-// Root route
+// Root route - redirect to CRM
 app.get('/', (req, res) => {
-  res.json({ 
-    message: 'Welcome to AlphaX AI - Advanced AI Platform',
-    status: 'running',
-    version: '2.0.0',
-    environment: config.server.env,
-    timestamp: new Date().toISOString()
-  });
+  res.sendFile(path.join(__dirname, 'public', 'crm.html'));
 });
 
 // Health check endpoint
