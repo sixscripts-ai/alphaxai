@@ -1,7 +1,7 @@
 {
-  "name": "startupcrm",
-  "version": "2.0.0",
-  "description": "AI-Powered CRM for Startup Founders with Google Gemini Pro",
+  "name": "alphaxai",
+  "version": "1.0.0",
+  "description": "AlphaX AI Application",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -16,9 +16,13 @@
     "docker:run": "docker run -p 3000:3000 alphaxai"
   },
   "keywords": [
+    "crm",
     "ai",
-    "machine-learning",
-    "alphax"
+    "gemini",
+    "startup",
+    "inventory",
+    "sales-pipeline",
+    "agentic-ai"
   ],
   "author": "",
   "license": "MIT",
