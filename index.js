@@ -15,7 +15,6 @@ const authRoutes = require('./src/routes/auth');
 const aiRoutes = require('./src/routes/ai');
 const userRoutes = require('./src/routes/user');
 const dataRoutes = require('./src/routes/data');
-const crmRoutes = require('./src/routes/crm');
 
 const app = express();
 const PORT = config.server.port;
@@ -46,6 +45,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/data', dataRoutes);
+app.use('/api/crm', crmRoutes);
 
 // Root route
 app.get('/', (req, res) => {
