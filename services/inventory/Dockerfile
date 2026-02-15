@@ -1,0 +1,24 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy shared packages first
+COPY packages/database ./packages/database
+COPY packages/logger ./packages/logger
+
+# Build shared packages
+WORKDIR /app/packages/database
+RUN npm install && npm run build
+WORKDIR /app/packages/logger
+RUN npm install && npm run build
+
+# Setup service
+WORKDIR /app/services/inventory
+COPY services/inventory/package*.json ./
+RUN npm install
+
+COPY services/inventory .
+
+RUN npm run build
+
+CMD ["npm", "start"]

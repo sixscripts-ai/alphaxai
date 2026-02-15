@@ -1,55 +1,157 @@
 version: '3.8'
 
 services:
-  alphaxai:
-    build: .
+  gateway:
+    build: 
+      context: .
+      dockerfile: apps/gateway/Dockerfile
     ports:
-      - "3000:3000"
+      - "8000:8000"
     environment:
-      - NODE_ENV=production
-      - DATABASE_URL=mongodb://mongo:27017/alphaxai
-      - REDIS_URL=redis://redis:6379
+      - PORT=8000
     depends_on:
-      - mongo
       - redis
-    volumes:
-      - ./logs:/app/logs
-    restart: unless-stopped
+      - rabbitmq
 
-  mongo:
-    image: mongo:5.0
+  web:
+    build: 
+      context: ./apps/web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
     ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-      - ./data/mongo-init:/docker-entrypoint-initdb.d
+      - "4000:3000"
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=password
-      - MONGO_INITDB_DATABASE=alphaxai
-    restart: unless-stopped
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+
+  worker:
+    build:
+      context: services/worker
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/inventory_saas
+    depends_on:
+      - postgres
+
+  auth-service:
+    build: 
+      context: .
+      dockerfile: services/auth/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/inventory_saas
+      - RABBITMQ_URL=amqp://rabbitmq
+    depends_on:
+      - postgres
+      - rabbitmq
+
+  organization-service:
+    build: 
+      context: .
+      dockerfile: services/organization/Dockerfile
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/inventory_saas
+    depends_on:
+      - postgres
+
+  inventory-service:
+    build: 
+      context: .
+      dockerfile: services/inventory/Dockerfile
+    ports:
+      - "3003:3003"
+    environment:
+      - PORT=3003
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/inventory_saas
+    depends_on:
+      - postgres
+
+  usage-service:
+    build: 
+      context: .
+      dockerfile: services/usage/Dockerfile
+    ports:
+      - "3004:3004"
+    environment:
+      - PORT=3004
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/inventory_saas
+    depends_on:
+      - postgres
+
+  alert-service:
+    build: 
+      context: .
+      dockerfile: services/alert/Dockerfile
+    ports:
+      - "3005:3005"
+    environment:
+      - PORT=3005
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/inventory_saas
+    depends_on:
+      - postgres
+
+  audit-service:
+    build: 
+      context: .
+      dockerfile: services/audit/Dockerfile
+    ports:
+      - "3006:3006"
+    environment:
+      - PORT=3006
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/inventory_saas
+    depends_on:
+      - postgres
+
+  billing-service:
+    build: 
+      context: .
+      dockerfile: services/billing/Dockerfile
+    ports:
+      - "3007:3007"
+    environment:
+      - PORT=3007
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/inventory_saas
+    depends_on:
+      - postgres
+
+  integration-service:
+    build: 
+      context: .
+      dockerfile: services/integration/Dockerfile
+    ports:
+      - "3008:3008"
+    environment:
+      - PORT=3008
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/inventory_saas
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=inventory_saas
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
-    volumes:
-      - redis_data:/data
-    command: redis-server --appendonly yes
-    restart: unless-stopped
 
-  nginx:
-    image: nginx:alpine
+  rabbitmq:
+    image: rabbitmq:3-management
     ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./config/nginx.conf:/etc/nginx/nginx.conf
-      - ./ssl:/etc/ssl/certs
-    depends_on:
-      - alphaxai
-    restart: unless-stopped
+      - "5672:5672"
+      - "15672:15672"
 
 volumes:
-  mongo_data:
-  redis_data:
+  postgres_data:
