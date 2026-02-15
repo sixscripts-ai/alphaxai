@@ -7,7 +7,6 @@ require('dotenv').config();
 const config = require('./config');
 const logger = require('./src/utils/logger');
 const connectDB = require('./src/utils/database');
-const { connectTurso } = require('./src/utils/turso');
 const { errorHandler, notFound } = require('./src/middleware/errorMiddleware');
 const rateLimiter = require('./src/middleware/rateLimiter');
 
@@ -16,29 +15,12 @@ const authRoutes = require('./src/routes/auth');
 const aiRoutes = require('./src/routes/ai');
 const userRoutes = require('./src/routes/user');
 const dataRoutes = require('./src/routes/data');
-const crmRoutes = require('./src/routes/crm');
 
 const app = express();
 const PORT = config.server.port;
 
-// Connect to databases
-const initDatabases = async () => {
-  try {
-    // Connect to Turso (primary for CRM)
-    await connectTurso();
-    
-    // Try MongoDB connection (optional, for legacy features)
-    try {
-      await connectDB();
-    } catch (err) {
-      logger.warn('MongoDB not available, using Turso only');
-    }
-  } catch (error) {
-    logger.error('Database initialization failed:', error);
-  }
-};
-
-initDatabases();
+// Connect to database
+connectDB();
 
 // Security middleware
 app.use(helmet());
@@ -63,6 +45,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/data', dataRoutes);
+app.use('/api/crm', crmRoutes);
 
 // Root route - redirect to CRM
 app.get('/', (req, res) => {
