@@ -6,6 +6,11 @@ const ConversationSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  organization: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'Organization',
+    required: true
+  },
   title: {
     type: String,
     required: [true, 'Please add a conversation title'],
@@ -35,7 +40,7 @@ const ConversationSchema = new mongoose.Schema({
   settings: {
     model: {
       type: String,
-      default: 'gpt-3.5-turbo'
+      default: 'gemini-pro-3'
     },
     temperature: {
       type: Number,

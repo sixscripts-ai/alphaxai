@@ -29,6 +29,15 @@ const UserSchema = new mongoose.Schema({
     enum: ['user', 'admin', 'moderator'],
     default: 'user'
   },
+  organization: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Organization'
+  },
+  organizationRole: {
+    type: String,
+    enum: ['owner', 'admin', 'member'],
+    default: 'member'
+  },
   avatar: {
     type: String,
     default: 'no-photo.jpg'

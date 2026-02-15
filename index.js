@@ -7,6 +7,7 @@ require('dotenv').config();
 const config = require('./config');
 const logger = require('./src/utils/logger');
 const connectDB = require('./src/utils/database');
+const { validateEnvironment } = require('./src/utils/envValidation');
 const { errorHandler, notFound } = require('./src/middleware/errorMiddleware');
 const rateLimiter = require('./src/middleware/rateLimiter');
 
@@ -15,12 +16,21 @@ const authRoutes = require('./src/routes/auth');
 const aiRoutes = require('./src/routes/ai');
 const userRoutes = require('./src/routes/user');
 const dataRoutes = require('./src/routes/data');
+const organizationRoutes = require('./src/routes/organization');
+const platformRoutes = require('./src/routes/platform');
 
 const app = express();
 const PORT = config.server.port;
 
+const envIssues = validateEnvironment();
+if (envIssues.length > 0) {
+  throw new Error(`Environment validation failed: ${envIssues.join('; ')}`);
+}
+
 // Connect to database
-connectDB();
+if (process.env.NODE_ENV !== 'test') {
+  connectDB();
+}
 
 // Security middleware
 app.use(helmet());
@@ -37,7 +47,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Static files
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // API Routes
@@ -45,6 +55,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/data', dataRoutes);
+app.use('/api/organizations', organizationRoutes);
+app.use('/api/platform', platformRoutes);
 
 // Root route
 app.get('/', (req, res) => {
@@ -53,6 +65,7 @@ app.get('/', (req, res) => {
     status: 'running',
     version: '2.0.0',
     environment: config.server.env,
+    database: 'turso',
     timestamp: new Date().toISOString()
   });
 });

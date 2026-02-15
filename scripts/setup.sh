@@ -42,16 +42,12 @@ if [ ! -f .env ]; then
     echo "⚠️  Please edit .env file with your configuration before starting the server"
 fi
 
-# Check if MongoDB is running
-echo "🗄️  Checking MongoDB connection..."
-if command -v mongosh >/dev/null 2>&1; then
-    if mongosh --eval "db.runCommand('ping')" >/dev/null 2>&1; then
-        echo "✅ MongoDB is running"
-    else
-        echo "⚠️  MongoDB is not running. Please start MongoDB before running the application."
-    fi
+# Check if Turso configuration exists
+echo "🗄️  Checking Turso configuration..."
+if grep -q "TURSO_DATABASE_URL=" .env; then
+    echo "✅ TURSO_DATABASE_URL configured"
 else
-    echo "⚠️  MongoDB CLI not found. Please ensure MongoDB is installed and running."
+    echo "⚠️  TURSO_DATABASE_URL is missing from .env"
 fi
 
 # Check if Redis is available
