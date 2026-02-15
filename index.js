@@ -22,10 +22,13 @@ const PORT = config.server.port;
 // Connect to database
 connectDB();
 
-// Security middleware
-app.use(helmet());
+// Security middleware - Allow embedding in frames for preview
+app.use(helmet({
+  frameguard: false,
+  contentSecurityPolicy: false
+}));
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: '*',
   credentials: true
 }));
 
