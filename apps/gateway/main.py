@@ -1,5 +1,5 @@
 import httpx
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Response
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
@@ -55,7 +55,14 @@ async def proxy_request(service_url: str, path: str, request: Request):
                 content=content,
                 params=request.query_params
             )
-            return JSONResponse(content=response.json(), status_code=response.status_code)
+            
+            # Check content type before parsing JSON
+            content_type = response.headers.get("content-type", "")
+            if "application/json" in content_type:
+                return JSONResponse(content=response.json(), status_code=response.status_code)
+            else:
+                return Response(content=response.content, status_code=response.status_code, media_type=content_type)
+                
         except httpx.RequestError as exc:
             logger.error(f"Proxy connection error: {exc}")
             return JSONResponse(content={"error": f"Service unavailable: {exc}"}, status_code=503)
