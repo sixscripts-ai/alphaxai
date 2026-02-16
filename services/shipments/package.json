@@ -9,7 +9,8 @@
     "db:migrate": "node ../../packages/database/dist/migrate.js"
   },
   "dependencies": {
-    "@inventory/database": "*",
+    "@inventory/database": "file:../../packages/database",
+    "@inventory/logger": "file:../../packages/logger",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
