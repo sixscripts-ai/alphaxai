@@ -19,7 +19,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Service URLs
+# Service URLs - Print startup config
+logger.info("Initializing Gateway with Service URLs:")
 SERVICES = {
     "auth": os.getenv("AUTH_SERVICE_URL", "http://auth-service:3001"),
     "organization": os.getenv("ORGANIZATION_SERVICE_URL", "http://organization-service:3002"),
@@ -30,12 +31,19 @@ SERVICES = {
     "billing": os.getenv("BILLING_SERVICE_URL", "http://billing-service:3007"),
     "integration": os.getenv("INTEGRATION_SERVICE_URL", "http://integration-service:3008"),
 }
+for name, url in SERVICES.items():
+    logger.info(f"  {name.upper()}: {url}")
 
 async def proxy_request(service_url: str, path: str, request: Request):
     # Intelligent Protocol Handling
     if not service_url.startswith("http"):
+        # If it looks like a Render URL, force HTTPS
         if "onrender.com" in service_url:
             service_url = f"https://{service_url}"
+        # If it looks like a local Docker URL (e.g., auth-service:3001), use HTTP
+        elif ":" in service_url and "localhost" not in service_url:
+             service_url = f"http://{service_url}"
+        # Default to HTTP
         else:
             service_url = f"http://{service_url}"
         
@@ -48,10 +56,16 @@ async def proxy_request(service_url: str, path: str, request: Request):
         try:
             # Forward request
             content = await request.body()
+            
+            # Filter headers - Host header can confuse the upstream service
+            headers = dict(request.headers)
+            headers.pop("host", None)
+            headers.pop("content-length", None) # Let httpx handle content-length
+            
             response = await client.request(
                 method=request.method,
                 url=url,
-                headers=request.headers,
+                headers=headers,
                 content=content,
                 params=request.query_params
             )
