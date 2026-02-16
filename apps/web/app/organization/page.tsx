@@ -24,19 +24,14 @@ interface User {
 export default function OrganizationPage() {
   const [activeTab, setActiveTab] = useState<'locations' | 'users'>('locations');
   const [locations, setLocations] = useState<Location[]>([]);
-  const [users, setUsers] = useState<User[]>([]); // Mock for now as we don't have a list users endpoint in auth controller yet
+  const [users, setUsers] = useState<User[]>([]);
   const [showAddLocation, setShowAddLocation] = useState(false);
 
   useEffect(() => {
     if (activeTab === 'locations') {
       fetchLocations();
     } else {
-      // fetchUsers(); // TODO: Implement get users endpoint
-      // Mock users for UI demo
-      setUsers([
-        { id: '1', email: 'owner@example.com', first_name: 'John', last_name: 'Doe', roles: ['OWNER'] },
-        { id: '2', email: 'manager@example.com', first_name: 'Jane', last_name: 'Smith', roles: ['MANAGER'] },
-      ]);
+      fetchUsers();
     }
   }, [activeTab]);
 
@@ -46,6 +41,15 @@ export default function OrganizationPage() {
       setLocations(response.data);
     } catch (error) {
       console.error('Failed to fetch locations', error);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const response = await api.get('/api/organization/users');
+      setUsers(response.data);
+    } catch (error) {
+      console.error('Failed to fetch users', error);
     }
   };
 

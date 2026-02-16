@@ -2,22 +2,89 @@
 
 import { Sidebar } from '../../components/ui/Sidebar';
 import { motion } from 'framer-motion';
-import { Bell, AlertTriangle, Info, CheckCircle, X } from 'lucide-react';
-import { useState } from 'react';
+import { Bell, AlertTriangle, Info, CheckCircle, X, Loader2, Package } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import api from '../../lib/api';
 
-const initialAlerts = [
-  { id: 1, type: 'critical', message: 'Low stock warning: MacBook Pro M3 (SKU: MBP-M3-14)', time: '2 mins ago' },
-  { id: 2, type: 'warning', message: 'Unusual sales spike detected in New York Warehouse', time: '1 hour ago' },
-  { id: 3, type: 'info', message: 'System maintenance scheduled for Sunday at 2 AM', time: '5 hours ago' },
-  { id: 4, type: 'success', message: 'Backup completed successfully', time: '1 day ago' },
-];
+interface Alert {
+  id: string;
+  type: 'critical' | 'warning' | 'info' | 'success';
+  message: string;
+  time: string;
+}
 
 export default function AlertsPage() {
-  const [alerts, setAlerts] = useState(initialAlerts);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
-  const removeAlert = (id: number) => {
-    setAlerts(alerts.filter(a => a.id !== id));
+  useEffect(() => {
+    const fetchAlerts = async () => {
+      try {
+        const statsRes = await api.get('/api/inventory/stats');
+        const generatedAlerts: Alert[] = [];
+
+        // Generate alerts from low-stock items
+        if (statsRes.data.lowStockItems) {
+          for (const item of statsRes.data.lowStockItems) {
+            const alertType = item.status === 'OUT_OF_STOCK' ? 'critical' : 'warning';
+            generatedAlerts.push({
+              id: `stock-${item.id}`,
+              type: alertType,
+              message: item.status === 'OUT_OF_STOCK' 
+                ? `Out of stock: ${item.name} (SKU: ${item.sku})` 
+                : `Low stock warning: ${item.name} (SKU: ${item.sku}) — ${Math.round(item.qty)} remaining`,
+              time: 'Current',
+            });
+          }
+        }
+
+        // Add system info alert
+        if (statsRes.data.totalItems > 0) {
+          generatedAlerts.push({
+            id: 'system-info',
+            type: 'info',
+            message: `Inventory tracking ${statsRes.data.totalItems} items (${statsRes.data.activeItems} active)`,
+            time: 'System',
+          });
+        }
+
+        // If no stock issues, show success
+        if (statsRes.data.lowStockItems?.length === 0) {
+          generatedAlerts.push({
+            id: 'all-good',
+            type: 'success',
+            message: 'All inventory levels are healthy — no stock alerts',
+            time: 'System',
+          });
+        }
+
+        setAlerts(generatedAlerts);
+      } catch (error) {
+        console.error('Failed to fetch alerts:', error);
+        setAlerts([{
+          id: 'error',
+          type: 'warning',
+          message: 'Unable to fetch inventory data for alerts',
+          time: 'Now',
+        }]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAlerts();
+  }, []);
+
+  const removeAlert = (id: string) => {
+    setDismissed(prev => new Set(prev).add(id));
   };
+
+  const clearAll = () => {
+    setDismissed(new Set(alerts.map(a => a.id)));
+  };
+
+  const visibleAlerts = alerts.filter(a => !dismissed.has(a.id));
 
   return (
     <div className="flex min-h-screen bg-[#0a0a0a] text-white font-sans">
@@ -46,7 +113,7 @@ export default function AlertsPage() {
           </div>
           
           <button 
-            onClick={() => setAlerts([])}
+            onClick={clearAll}
             className="text-sm text-gray-400 hover:text-white transition-colors underline"
           >
             Clear All
@@ -54,13 +121,18 @@ export default function AlertsPage() {
         </header>
 
         <div className="space-y-4 max-w-4xl relative z-10">
-          {alerts.length === 0 ? (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+              <Loader2 size={32} className="animate-spin text-blue-400 mb-4" />
+              <p>Checking inventory alerts...</p>
+            </div>
+          ) : visibleAlerts.length === 0 ? (
             <div className="text-center py-20 text-gray-500">
               <Bell size={48} className="mx-auto mb-4 opacity-50" />
               <p>No new alerts</p>
             </div>
           ) : (
-            alerts.map((alert, index) => (
+            visibleAlerts.map((alert, index) => (
               <AlertCard key={alert.id} alert={alert} index={index} onDismiss={() => removeAlert(alert.id)} />
             ))
           )}
@@ -70,7 +142,7 @@ export default function AlertsPage() {
   );
 }
 
-function AlertCard({ alert, index, onDismiss }: { alert: any, index: number, onDismiss: () => void }) {
+function AlertCard({ alert, index, onDismiss }: { alert: Alert, index: number, onDismiss: () => void }) {
   const icons = {
     critical: <AlertTriangle className="text-red-500" size={24} />,
     warning: <AlertTriangle className="text-orange-500" size={24} />,
@@ -91,11 +163,11 @@ function AlertCard({ alert, index, onDismiss }: { alert: any, index: number, onD
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, height: 0, marginBottom: 0 }}
       transition={{ delay: index * 0.1 }}
-      className={`p-4 rounded-2xl border flex items-start justify-between group relative ${colors[alert.type as keyof typeof colors]}`}
+      className={`p-4 rounded-2xl border flex items-start justify-between group relative ${colors[alert.type]}`}
     >
       <div className="flex items-start">
         <div className="mr-4 mt-1">
-          {icons[alert.type as keyof typeof icons]}
+          {icons[alert.type]}
         </div>
         <div>
           <p className="font-medium text-white mb-1">{alert.message}</p>

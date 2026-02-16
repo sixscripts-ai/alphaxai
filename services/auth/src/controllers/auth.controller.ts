@@ -180,6 +180,49 @@ export const me = async (req: Request, res: Response) => {
   res.json({ user: { ...user, roles, organizationId: orgId } });
 };
 
+export const updateProfile = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    const { firstName, lastName } = req.body;
+
+    if (!firstName && !lastName) {
+      return res.status(400).json({ error: 'At least one of firstName or lastName is required' });
+    }
+
+    const fields: string[] = [];
+    const values: any[] = [];
+    let idx = 1;
+
+    if (firstName !== undefined) { fields.push(`first_name = $${idx++}`); values.push(firstName); }
+    if (lastName !== undefined) { fields.push(`last_name = $${idx++}`); values.push(lastName); }
+
+    values.push(userId);
+    const result = await query(
+      `UPDATE users SET ${fields.join(', ')} WHERE id = $${idx} RETURNING id, email, first_name, last_name`,
+      values
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = result.rows[0];
+
+    // Get roles for response
+    const orgId = (req as any).user.orgId;
+    const memberResult = await query(
+      `SELECT r.name as role_name FROM org_members om JOIN roles r ON om.role_id = r.id WHERE om.user_id = $1 AND om.org_id = $2`,
+      [userId, orgId]
+    );
+    const roles = memberResult.rows.map((r: any) => r.role_name);
+
+    res.json({ user: { ...user, roles, organizationId: orgId } });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 export const refreshToken = async (req: Request, res: Response) => {
   try {
     const { refreshToken: token } = req.body;

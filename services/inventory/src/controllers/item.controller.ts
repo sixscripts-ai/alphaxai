@@ -311,7 +311,8 @@ export const getStats = async (req: Request, res: Response) => {
   try {
     const orgId = (req as any).user.orgId;
 
-    const result = await db.query(
+    // Basic counts
+    const countResult = await db.query(
       `SELECT
          COUNT(*)::int as total_items,
          COUNT(*) FILTER (WHERE is_active = true)::int as active_items
@@ -319,14 +320,51 @@ export const getStats = async (req: Request, res: Response) => {
       [orgId]
     );
 
-    const { total_items, active_items } = result.rows[0];
+    const { total_items, active_items } = countResult.rows[0];
+
+    // Category breakdown
+    const categoryResult = await db.query(
+      `SELECT COALESCE(category, 'Uncategorized') as name, COUNT(*)::int as value
+       FROM items WHERE org_id = $1
+       GROUP BY category ORDER BY value DESC`,
+      [orgId]
+    );
+
+    // Stock levels per item (for low stock / out of stock counts)
+    const stockResult = await db.query(
+      `SELECT i.id, i.name, i.sku, i.category,
+              COALESCE(SUM(im.signed_quantity), 0)::float as qty,
+              COALESCE(rp.min_order_qty, 10) as reorder_point
+       FROM items i
+       LEFT JOIN inventory_movements im ON im.item_id = i.id
+       LEFT JOIN replenishment_policies rp ON rp.item_id = i.id AND rp.org_id = i.org_id
+       WHERE i.org_id = $1
+       GROUP BY i.id, i.name, i.sku, i.category, rp.min_order_qty`,
+      [orgId]
+    );
+
+    let lowStock = 0;
+    let outOfStock = 0;
+    const lowStockItems: any[] = [];
+
+    for (const item of stockResult.rows) {
+      if (item.qty <= 0) {
+        outOfStock++;
+        lowStockItems.push({ ...item, status: 'OUT_OF_STOCK' });
+      } else if (item.qty <= item.reorder_point) {
+        lowStock++;
+        lowStockItems.push({ ...item, status: 'LOW_STOCK' });
+      }
+    }
 
     res.json({
       totalItems: total_items,
       activeItems: active_items,
-      lowStock: 0,
-      outOfStock: 0,
+      lowStock,
+      outOfStock,
       totalValue: 0,
+      categories: categoryResult.rows,
+      lowStockItems: lowStockItems.slice(0, 20), // Top 20
     });
   } catch (error) {
     console.error('Stats error:', error);

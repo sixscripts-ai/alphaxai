@@ -16,29 +16,66 @@ import {
   Pie, 
   Cell 
 } from 'recharts';
-import { Calendar, Download, TrendingUp, Zap } from 'lucide-react';
+import { Calendar, Download, TrendingUp, Zap, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import api from '../../lib/api';
 
-const salesData = [
-  { name: 'Mon', sales: 4000, profit: 2400 },
-  { name: 'Tue', sales: 3000, profit: 1398 },
-  { name: 'Wed', sales: 2000, profit: 9800 },
-  { name: 'Thu', sales: 2780, profit: 3908 },
-  { name: 'Fri', sales: 1890, profit: 4800 },
-  { name: 'Sat', sales: 2390, profit: 3800 },
-  { name: 'Sun', sales: 3490, profit: 4300 },
-];
-
-const categoryData = [
-  { name: 'Electronics', value: 400 },
-  { name: 'Clothing', value: 300 },
-  { name: 'Home', value: 300 },
-  { name: 'Garden', value: 200 },
-];
-
-const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f43f5e'];
+const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f43f5e', '#f59e0b', '#06b6d4', '#ec4899', '#84cc16'];
 
 export default function AnalyticsPage() {
+  const [categoryData, setCategoryData] = useState<any[]>([]);
+  const [historyData, setHistoryData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        const [statsRes, historyRes] = await Promise.all([
+          api.get('/api/inventory/stats'),
+          api.get('/api/inventory/analytics/history').catch(() => ({ data: [] })),
+        ]);
+
+        // Category data from stats
+        if (statsRes.data.categories && statsRes.data.categories.length > 0) {
+          setCategoryData(statsRes.data.categories);
+        } else {
+          setCategoryData([{ name: 'No Data', value: 1 }]);
+        }
+
+        // History data for the bar chart
+        if (historyRes.data && historyRes.data.length > 0) {
+          const formatted = historyRes.data.slice(-7).map((d: any) => ({
+            name: new Date(d.date).toLocaleDateString('en-US', { weekday: 'short' }),
+            value: Math.round(d.value || 0),
+            quantity: d.quantity || 0,
+          }));
+          setHistoryData(formatted);
+        }
+      } catch (error) {
+        console.error('Failed to fetch analytics:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAnalytics();
+  }, []);
+
+  const handleExport = async () => {
+    try {
+      const response = await api.get('/api/inventory/items/export', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'inventory_export.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('Export failed:', error);
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-[#0a0a0a] text-white font-sans">
       <Sidebar />
@@ -73,19 +110,23 @@ export default function AnalyticsPage() {
                 <Zap size={18} className="mr-2" />
                 Launch AI Agent
             </Link>
-            <button className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors flex items-center text-gray-300">
-              <Calendar size={18} className="mr-2" />
-              Last 7 Days
-            </button>
-            <button className="px-4 py-2 bg-blue-600/20 text-blue-400 border border-blue-500/20 rounded-xl hover:bg-blue-600/30 transition-colors flex items-center">
+            <button 
+              onClick={handleExport}
+              className="px-4 py-2 bg-blue-600/20 text-blue-400 border border-blue-500/20 rounded-xl hover:bg-blue-600/30 transition-colors flex items-center"
+            >
               <Download size={18} className="mr-2" />
               Export
             </button>
           </div>
         </header>
 
+        {loading ? (
+          <div className="flex items-center justify-center h-64 relative z-10">
+            <Loader2 className="animate-spin text-blue-400" size={32} />
+          </div>
+        ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 relative z-10">
-          {/* Sales Trend */}
+          {/* Inventory Value / History Trend */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -94,23 +135,31 @@ export default function AnalyticsPage() {
           >
             <h3 className="text-lg font-semibold mb-6 flex items-center">
               <TrendingUp size={20} className="mr-2 text-blue-400" />
-              Sales Overview
+              {historyData.length > 0 ? 'Inventory Value Trend' : 'Inventory Overview'}
             </h3>
             <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={salesData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                  <XAxis dataKey="name" stroke="#ffffff50" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#ffffff50" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
-                  <Tooltip 
-                    cursor={{ fill: '#ffffff05' }}
-                    contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
-                    itemStyle={{ color: '#fff' }}
-                  />
-                  <Bar dataKey="sales" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="profit" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {historyData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={historyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                    <XAxis dataKey="name" stroke="#ffffff50" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#ffffff50" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
+                    <Tooltip 
+                      cursor={{ fill: '#ffffff05' }}
+                      contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
+                      itemStyle={{ color: '#fff' }}
+                    />
+                    <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Value ($)" />
+                    <Bar dataKey="quantity" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Quantity" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                  <TrendingUp size={48} className="mb-4 opacity-30" />
+                  <p>No history data yet</p>
+                  <p className="text-sm mt-1">Data will appear after inventory snapshots run</p>
+                </div>
+              )}
             </div>
           </motion.div>
 
@@ -145,16 +194,17 @@ export default function AnalyticsPage() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div className="flex justify-center space-x-6 mt-4">
+            <div className="flex flex-wrap justify-center gap-4 mt-4">
               {categoryData.map((entry, index) => (
                 <div key={index} className="flex items-center">
                   <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                  <span className="text-sm text-gray-400">{entry.name}</span>
+                  <span className="text-sm text-gray-400">{entry.name} ({entry.value})</span>
                 </div>
               ))}
             </div>
           </motion.div>
         </div>
+        )}
       </main>
     </div>
   );

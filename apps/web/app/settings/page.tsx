@@ -83,7 +83,20 @@ export default function SettingsPage() {
 
   const handleSaveProfile = async () => {
     setSaveStatus('saving');
-    setTimeout(() => setSaveStatus('saved'), 1000);
+    try {
+      const res = await api.put('/api/auth/profile', {
+        firstName: profileData.firstName,
+        lastName: profileData.lastName,
+      });
+      // Update auth store with new data
+      if (res.data.user) {
+        useAuthStore.setState({ user: res.data.user });
+      }
+      setSaveStatus('saved');
+    } catch (error) {
+      console.error('Failed to save profile:', error);
+      setSaveStatus('idle');
+    }
     setTimeout(() => setSaveStatus('idle'), 3000);
   };
 

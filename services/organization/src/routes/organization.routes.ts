@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getOrganization } from '../controllers/organization.controller';
+import { getOrganization, getUsers } from '../controllers/organization.controller';
 import { authenticate } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -7,5 +7,6 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/', getOrganization);
+router.get('/users', getUsers);
 
 export default router;
