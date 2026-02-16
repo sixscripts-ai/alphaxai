@@ -2,7 +2,7 @@
 
 import { Sidebar } from '../../components/ui/Sidebar';
 import { motion } from 'framer-motion';
-import { User, Bell, Shield, Palette, Globe, Save } from 'lucide-react';
+import { User, Bell, Shield, Palette, Globe, Save, Database } from 'lucide-react';
 import { useState } from 'react';
 
 export default function SettingsPage() {
@@ -49,6 +49,7 @@ export default function SettingsPage() {
               { id: 'security', label: 'Security', icon: Shield },
               { id: 'appearance', label: 'Appearance', icon: Palette },
               { id: 'integrations', label: 'Integrations', icon: Globe },
+              { id: 'database', label: 'Database Connection', icon: Database },
             ].map((item) => (
               <button
                 key={item.id}
@@ -128,6 +129,55 @@ export default function SettingsPage() {
                     <p className="text-sm text-gray-500">Receive weekly summary of your inventory status</p>
                   </div>
                   <ToggleSwitch defaultChecked />
+                </div>
+              </div>
+            )}
+            
+            {activeSection === 'database' && (
+              <div className="space-y-6">
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex items-start">
+                    <Database className="text-blue-400 mt-1 mr-3" size={24} />
+                    <div>
+                        <h3 className="font-bold text-white">Database Connection</h3>
+                        <p className="text-sm text-gray-400 mt-1">
+                            Your data is securely stored in a PostgreSQL database managed by Render.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-2">Connection String (Read-Only)</label>
+                        <div className="flex">
+                            <input 
+                                readOnly 
+                                type="text" 
+                                value="postgres://********:********@dpg-cxxxxxxxx.oregon-postgres.render.com/alphaxai_db" 
+                                className="flex-1 bg-white/5 border border-white/10 rounded-l-lg px-4 py-2 text-gray-500 font-mono text-sm focus:outline-none" 
+                            />
+                            <button className="bg-white/10 border border-white/10 border-l-0 rounded-r-lg px-4 text-sm hover:bg-white/20 transition-colors">
+                                Copy
+                            </button>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                            This connection string is used by your backend services to access inventory data. 
+                            For security reasons, the full credentials are hidden.
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6">
+                        <div className="bg-white/5 p-4 rounded-xl border border-white/10">
+                            <p className="text-xs text-gray-400 uppercase mb-1">Status</p>
+                            <div className="flex items-center">
+                                <div className="w-2 h-2 rounded-full bg-emerald-500 mr-2"></div>
+                                <span className="text-white font-medium">Connected</span>
+                            </div>
+                        </div>
+                        <div className="bg-white/5 p-4 rounded-xl border border-white/10">
+                            <p className="text-xs text-gray-400 uppercase mb-1">Region</p>
+                            <span className="text-white font-medium">Oregon (US West)</span>
+                        </div>
+                    </div>
                 </div>
               </div>
             )}
