@@ -7,7 +7,7 @@ export const generateTokens = (user: any) => {
   const accessToken = jwt.sign(
     { 
       userId: user.id, 
-      orgId: user.organization_id, 
+      orgId: user.organizationId || user.organization_id, 
       roles: user.roles 
     },
     JWT_SECRET,
