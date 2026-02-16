@@ -3,6 +3,11 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("gateway")
 
 app = FastAPI(title="Inventory Intelligence API Gateway")
 
@@ -27,27 +32,33 @@ SERVICES = {
 }
 
 async def proxy_request(service_url: str, path: str, request: Request):
-    client = httpx.AsyncClient()
+    # Ensure service_url has a protocol
+    if not service_url.startswith("http"):
+        service_url = f"http://{service_url}"
+        
     url = f"{service_url}{path}"
     
-    try:
-        # Forward request
-        content = await request.body()
-        response = await client.request(
-            method=request.method,
-            url=url,
-            headers=request.headers,
-            content=content,
-            params=request.query_params,
-            timeout=30.0
-        )
-        return JSONResponse(content=response.json(), status_code=response.status_code)
-    except httpx.RequestError as exc:
-        return JSONResponse(content={"error": f"Service unavailable: {exc}"}, status_code=503)
-    except Exception as exc:
-        return JSONResponse(content={"error": str(exc)}, status_code=500)
-    finally:
-        await client.aclose()
+    logger.info(f"Proxying {request.method} request to: {url}")
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            # Forward request
+            content = await request.body()
+            response = await client.request(
+                method=request.method,
+                url=url,
+                headers=request.headers,
+                content=content,
+                params=request.query_params,
+                timeout=30.0
+            )
+            return JSONResponse(content=response.json(), status_code=response.status_code)
+        except httpx.RequestError as exc:
+            logger.error(f"Proxy error: {exc}")
+            return JSONResponse(content={"error": f"Service unavailable: {exc}"}, status_code=503)
+        except Exception as exc:
+            logger.error(f"Unexpected error: {exc}")
+            return JSONResponse(content={"error": str(exc)}, status_code=500)
 
 @app.get("/")
 async def root():
@@ -61,6 +72,10 @@ async def health_check():
 @app.api_route("/api/auth/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
 async def auth_proxy(path: str, request: Request):
     return await proxy_request(SERVICES["auth"], f"/api/auth/{path}", request)
+
+@app.api_route("/api/auth", methods=["GET", "POST"])
+async def auth_root_proxy(request: Request):
+    return await proxy_request(SERVICES["auth"], "/api/auth", request)
 
 # Organization Routes
 @app.api_route("/api/locations/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
@@ -79,5 +94,3 @@ async def inventory_proxy(path: str, request: Request):
 @app.api_route("/api/inventory", methods=["GET", "POST"])
 async def inventory_root_proxy(request: Request):
     return await proxy_request(SERVICES["inventory"], "/api/inventory", request)
-
-# Add other service proxies as needed
