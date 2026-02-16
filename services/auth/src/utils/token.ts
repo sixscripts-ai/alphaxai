@@ -11,7 +11,7 @@ export const generateTokens = (user: any) => {
       roles: user.roles 
     },
     JWT_SECRET,
-    { expiresIn: '15m' }
+    { expiresIn: '24h' }
   );
 
   const refreshToken = jwt.sign(

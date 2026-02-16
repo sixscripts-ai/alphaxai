@@ -15,6 +15,8 @@ CREATE TABLE users (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   email text UNIQUE NOT NULL, -- Changed citext to text as citext extension might not be enabled
   password_hash text NOT NULL,
+  first_name text,
+  last_name text,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -62,6 +64,7 @@ CREATE TABLE items (
   org_id uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   sku text NOT NULL,
   name text NOT NULL,
+  description text,
   unit text NOT NULL DEFAULT 'each', -- each, quart, tube, etc
   category text,
   is_active boolean NOT NULL DEFAULT true,

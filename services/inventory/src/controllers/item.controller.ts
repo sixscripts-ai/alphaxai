@@ -5,6 +5,7 @@ import { z } from 'zod';
 const createItemSchema = z.object({
   sku: z.string().min(1),
   name: z.string().min(1),
+  description: z.string().optional(),
   unit: z.string().default('each'),
   category: z.string().optional(),
   unitCost: z.number().min(0).default(0),
@@ -14,17 +15,17 @@ const createItemSchema = z.object({
 export const createItem = async (req: Request, res: Response) => {
   const client = await db.getClient();
   try {
-    const { sku, name, unit, category, unitCost, locationId } = createItemSchema.parse(req.body);
+    const { sku, name, description, unit, category, unitCost, locationId } = createItemSchema.parse(req.body);
     const orgId = (req as any).user.orgId;
 
     await client.query('BEGIN');
 
     const itemResult = await client.query(
       `INSERT INTO items 
-       (org_id, sku, name, unit, category)
-       VALUES ($1, $2, $3, $4, $5)
+       (org_id, sku, name, description, unit, category)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [orgId, sku, name, unit, category]
+      [orgId, sku, name, description || null, unit, category]
     );
     const item = itemResult.rows[0];
 
@@ -83,14 +84,13 @@ export const getItems = async (req: Request, res: Response) => {
         ${locationId ? 'AND rp.location_id = $2' : ''}
       ),
       item_costing AS (
-        SELECT 
+        SELECT DISTINCT ON (ic.item_id)
             ic.item_id, 
             ic.unit_cost
         FROM item_costs ic
         WHERE ic.org_id = $1
         ${locationId ? 'AND ic.location_id = $2' : ''}
-        ORDER BY ic.effective_at DESC
-        LIMIT 1 -- Ideally this should be a LATERAL JOIN or distinct on item_id, simplified for now
+        ORDER BY ic.item_id, ic.effective_at DESC
       )
       SELECT 
         i.*, 
@@ -99,8 +99,8 @@ export const getItems = async (req: Request, res: Response) => {
         COALESCE(rp.reorder_point, 10) as reorder_point, -- Default 10 if not set
         COALESCE(ic.unit_cost, 0) as unit_cost,
         CASE 
-            WHEN COALESCE(s.quantity_on_hand, 0) <= COALESCE(rp.reorder_point, 10) THEN 'LOW_STOCK'
             WHEN COALESCE(s.quantity_on_hand, 0) = 0 THEN 'OUT_OF_STOCK'
+            WHEN COALESCE(s.quantity_on_hand, 0) <= COALESCE(rp.reorder_point, 10) THEN 'LOW_STOCK'
             ELSE 'ACTIVE'
         END as status
       FROM items i

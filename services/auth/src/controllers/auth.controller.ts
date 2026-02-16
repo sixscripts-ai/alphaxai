@@ -1,14 +1,15 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import { query, getClient } from '@inventory/database';
-import { generateTokens } from '../utils/token';
+import { generateTokens, verifyRefreshToken } from '../utils/token';
 import { z } from 'zod';
 
 const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   organizationName: z.string().min(1),
-  // firstName/lastName removed from schema provided by user, ignoring for now or storing in metadata if we had it
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
 });
 
 const loginSchema = z.object({
@@ -19,7 +20,7 @@ const loginSchema = z.object({
 export const register = async (req: Request, res: Response) => {
   const client = await getClient();
   try {
-    const { email, password, organizationName } = registerSchema.parse(req.body);
+    const { email, password, organizationName, firstName, lastName } = registerSchema.parse(req.body);
 
     await client.query('BEGIN');
 
@@ -42,10 +43,10 @@ export const register = async (req: Request, res: Response) => {
 
     // 2. Create User
     const newUserResult = await client.query(
-      `INSERT INTO users (email, password_hash)
-       VALUES ($1, $2)
-       RETURNING id, email`,
-      [email, passwordHash]
+      `INSERT INTO users (email, password_hash, first_name, last_name)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, email, first_name, last_name`,
+      [email, passwordHash, firstName || null, lastName || null]
     );
     const user = newUserResult.rows[0];
 
@@ -74,7 +75,7 @@ export const register = async (req: Request, res: Response) => {
     const tokens = generateTokens(userPayload);
 
     res.status(201).json({
-      user: { id: user.id, email: user.email, roles: ['OWNER'], organizationId: orgId },
+      user: { id: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name, roles: ['OWNER'], organizationId: orgId },
       tokens,
     });
   } catch (error: any) {
@@ -94,7 +95,7 @@ export const login = async (req: Request, res: Response) => {
     const { email, password } = loginSchema.parse(req.body);
 
     // 1. Get User
-    const result = await query('SELECT * FROM users WHERE email = $1', [email]);
+    const result = await query('SELECT id, email, password_hash, first_name, last_name FROM users WHERE email = $1', [email]);
     const user = result.rows[0];
 
     if (!user) {
@@ -125,6 +126,8 @@ export const login = async (req: Request, res: Response) => {
     const userPayload = {
         id: user.id,
         email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
         organizationId: memberData.org_id,
         roles: [memberData.role_name]
     };
@@ -149,10 +152,10 @@ export const login = async (req: Request, res: Response) => {
 
 export const me = async (req: Request, res: Response) => {
   const userId = (req as any).user.userId;
-  const orgId = (req as any).user.organizationId; // From token
+  const orgId = (req as any).user.orgId; // From token
 
   const result = await query(
-    `SELECT u.id, u.email 
+    `SELECT u.id, u.email, u.first_name, u.last_name 
      FROM users u
      WHERE u.id = $1`,
     [userId]

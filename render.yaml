@@ -50,7 +50,7 @@ services:
           name: alphaxai-db
           property: connectionString
       - key: JWT_SECRET
-        generateValue: true
+        value: fe9436cea4c035b352bafe0fcc449c11367fda98ff35fd9a9f042fd34b1b57cd
 
   # -----------------------------
   # 3. Inventory Service
@@ -68,6 +68,8 @@ services:
         fromDatabase:
           name: alphaxai-db
           property: connectionString
+      - key: JWT_SECRET
+        value: fe9436cea4c035b352bafe0fcc449c11367fda98ff35fd9a9f042fd34b1b57cd
 
   # -----------------------------
   # 4. Organization Service
@@ -85,6 +87,8 @@ services:
         fromDatabase:
           name: alphaxai-db
           property: connectionString
+      - key: JWT_SECRET
+        value: fe9436cea4c035b352bafe0fcc449c11367fda98ff35fd9a9f042fd34b1b57cd
 
   # -----------------------------
   # 5. Worker
@@ -123,6 +127,8 @@ services:
         fromDatabase:
           name: alphaxai-db
           property: connectionString
+      - key: JWT_SECRET
+        value: fe9436cea4c035b352bafe0fcc449c11367fda98ff35fd9a9f042fd34b1b57cd
 
   # -----------------------------
   # 7. Team Service
@@ -140,6 +146,8 @@ services:
         fromDatabase:
           name: alphaxai-db
           property: connectionString
+      - key: JWT_SECRET
+        value: fe9436cea4c035b352bafe0fcc449c11367fda98ff35fd9a9f042fd34b1b57cd
 
   # -----------------------------
   # 8. Shipments Service
@@ -157,6 +165,8 @@ services:
         fromDatabase:
           name: alphaxai-db
           property: connectionString
+      - key: JWT_SECRET
+        value: fe9436cea4c035b352bafe0fcc449c11367fda98ff35fd9a9f042fd34b1b57cd
 
 databases:
   - name: alphaxai-db
