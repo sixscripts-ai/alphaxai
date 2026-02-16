@@ -47,16 +47,6 @@ interface DashboardData {
   daysInventoryRemaining: number;
 }
 
-const mockForecastData = [
-  { name: 'Week 1', demand: 4000, forecast: 4200, confidenceLower: 3800, confidenceUpper: 4600, reorderPoint: 2000 },
-  { name: 'Week 2', demand: 3000, forecast: 3100, confidenceLower: 2800, confidenceUpper: 3400, reorderPoint: 2000 },
-  { name: 'Week 3', demand: 2000, forecast: 2300, confidenceLower: 2000, confidenceUpper: 2600, reorderPoint: 2000 },
-  { name: 'Week 4', demand: 2780, forecast: 2900, confidenceLower: 2500, confidenceUpper: 3300, reorderPoint: 2000 },
-  { name: 'Week 5', demand: 1890, forecast: 2100, confidenceLower: 1700, confidenceUpper: 2500, reorderPoint: 2000 },
-  { name: 'Week 6', demand: 2390, forecast: 2500, confidenceLower: 2100, confidenceUpper: 2900, reorderPoint: 2000 },
-  { name: 'Week 7', demand: 3490, forecast: 3600, confidenceLower: 3200, confidenceUpper: 4000, reorderPoint: 2000 },
-];
-
 const agingData = [
   { range: '0-30 Days', value: 45000, items: 120 },
   { range: '31-60 Days', value: 25000, items: 80 },
@@ -70,32 +60,48 @@ export default function DashboardPage() {
     itemsCount: 0,
     lowStockCount: 0,
     inventoryValue: 0,
-    workingCapital: 125000, // Mock
-    turnoverRate: 4.2, // Mock
-    fillRate: 98.5, // Mock
-    daysInventoryRemaining: 24 // Mock
+    workingCapital: 0,
+    turnoverRate: 0,
+    fillRate: 0,
+    daysInventoryRemaining: 0
   });
+  const [forecastData, setForecastData] = useState<any[]>([]);
   const user = useAuthStore((state) => state.user);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [locationsRes, itemsRes] = await Promise.all([
-          api.get('/organizations/locations'),
-          api.get('/inventory/items')
+        const [summaryRes, forecastRes, locationsRes] = await Promise.all([
+          api.get('/inventory/analytics/summary'),
+          api.get('/inventory/analytics/forecast'),
+          api.get('/locations') // Correct endpoint from gateway
         ]);
         
-        const items = itemsRes.data;
-        const lowStock = items.filter((i: any) => i.quantity_on_hand <= i.reorder_point).length;
-        const value = items.reduce((acc: number, i: any) => acc + (i.quantity_on_hand * i.unit_cost), 0);
-
-        setData(prev => ({
-          ...prev,
+        const summary = summaryRes.data;
+        
+        setData({
           locationsCount: locationsRes.data.length,
-          itemsCount: items.length,
-          lowStockCount: lowStock,
-          inventoryValue: value
+          itemsCount: summary.skuCount,
+          lowStockCount: summary.lowStockCount,
+          inventoryValue: summary.totalValue,
+          workingCapital: summary.totalValue * 0.8, // Estimate
+          turnoverRate: summary.inventoryTurnover,
+          fillRate: 98.5, // Hardcoded for now
+          daysInventoryRemaining: 30 // Hardcoded for now
+        });
+
+        // Format forecast data for chart
+        const formattedForecast = forecastRes.data.map((f: any) => ({
+            name: new Date(f.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            demand: f.value, // In this chart, we might mix history and forecast. 
+            // The endpoint returns predicted demand.
+            forecast: f.value,
+            confidenceLower: f.lower,
+            confidenceUpper: f.upper,
+            reorderPoint: 50 // Mock threshold line
         }));
+        setForecastData(formattedForecast);
+
       } catch (error) {
         console.error('Failed to fetch dashboard data', error);
       }
@@ -249,7 +255,7 @@ export default function DashboardPage() {
             
             <div className="h-[350px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={mockForecastData}>
+                <ComposedChart data={forecastData}>
                   <defs>
                     <linearGradient id="colorConfidence" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.1}/>
