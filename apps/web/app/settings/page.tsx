@@ -40,9 +40,9 @@ export default function SettingsPage() {
     setDbStatus('checking');
     setServiceStatuses({ gateway: 'checking', auth: 'checking', inventory: 'checking', worker: 'checking' });
 
-    // Check gateway health (direct gateway endpoint)
+    // Check gateway health (via /api/ rewrite path)
     try {
-      const gatewayRes = await api.get('/health');
+      const gatewayRes = await api.get('/api/health/gateway');
       setServiceStatuses(prev => ({ ...prev, gateway: gatewayRes.data?.status === 'healthy' ? 'healthy' : 'error' }));
     } catch {
       setServiceStatuses(prev => ({ ...prev, gateway: 'error' }));

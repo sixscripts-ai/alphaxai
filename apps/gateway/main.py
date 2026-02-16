@@ -123,6 +123,8 @@ async def health_check():
 # Health check proxies — each service has /health at its root
 @app.get("/api/health/{service_name}")
 async def service_health_proxy(service_name: str, request: Request):
+    if service_name == "gateway":
+        return {"status": "healthy", "service": "gateway"}
     if service_name not in SERVICES:
         return JSONResponse(content={"error": f"Unknown service: {service_name}"}, status_code=404)
     return await proxy_request(SERVICES[service_name], "/health", request)
