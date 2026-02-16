@@ -1,157 +1,186 @@
-version: '3.8'
-
 services:
-  gateway:
-    build: 
-      context: .
-      dockerfile: apps/gateway/Dockerfile
-    ports:
-      - "8000:8000"
-    environment:
-      - PORT=8000
-    depends_on:
-      - redis
-      - rabbitmq
-
-  web:
-    build: 
-      context: ./apps/web
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: http://localhost:8000
-    ports:
-      - "4000:3000"
-    environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
-
-  worker-service:
-    build:
-      context: services/worker
-      dockerfile: Dockerfile
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/inventory_saas
-    depends_on:
-      - postgres
-
-  auth-service:
-    build: 
-      context: .
-      dockerfile: services/auth/Dockerfile
-    ports:
-      - "3001:3001"
-    environment:
-      - PORT=3001
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/inventory_saas
-      - RABBITMQ_URL=amqp://rabbitmq
-    depends_on:
-      - postgres
-      - rabbitmq
-
-  organization-service:
-    build: 
-      context: .
-      dockerfile: services/organization/Dockerfile
-    ports:
-      - "3002:3002"
-    environment:
-      - PORT=3002
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/inventory_saas
-    depends_on:
-      - postgres
-
-  inventory-service:
-    build: 
-      context: .
-      dockerfile: services/inventory/Dockerfile
-    ports:
-      - "3003:3003"
-    environment:
-      - PORT=3003
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/inventory_saas
-    depends_on:
-      - postgres
-
-  usage-service:
-    build: 
-      context: .
-      dockerfile: services/usage/Dockerfile
-    ports:
-      - "3004:3004"
-    environment:
-      - PORT=3004
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/inventory_saas
-    depends_on:
-      - postgres
-
-  alert-service:
-    build: 
-      context: .
-      dockerfile: services/alert/Dockerfile
-    ports:
-      - "3005:3005"
-    environment:
-      - PORT=3005
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/inventory_saas
-    depends_on:
-      - postgres
-
-  audit-service:
-    build: 
-      context: .
-      dockerfile: services/audit/Dockerfile
-    ports:
-      - "3006:3006"
-    environment:
-      - PORT=3006
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/inventory_saas
-    depends_on:
-      - postgres
-
-  billing-service:
-    build: 
-      context: .
-      dockerfile: services/billing/Dockerfile
-    ports:
-      - "3007:3007"
-    environment:
-      - PORT=3007
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/inventory_saas
-    depends_on:
-      - postgres
-
-  integration-service:
-    build: 
-      context: .
-      dockerfile: services/integration/Dockerfile
-    ports:
-      - "3008:3008"
-    environment:
-      - PORT=3008
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/inventory_saas
-    depends_on:
-      - postgres
-
+  # ─────────────────────────────────────────────
+  # Infrastructure
+  # ─────────────────────────────────────────────
   postgres:
     image: postgres:15-alpine
     ports:
       - "5433:5432"
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=inventory_saas
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-inventory_saas}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./packages/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
-  rabbitmq:
-    image: rabbitmq:3-management
+  # ─────────────────────────────────────────────
+  # API Gateway (FastAPI)
+  # ─────────────────────────────────────────────
+  gateway:
+    build:
+      context: .
+      dockerfile: apps/gateway/Dockerfile
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "8000:8000"
+    environment:
+      PORT: 8000
+      # Docker internal networking — no public URLs needed
+      AUTH_SERVICE_URL: http://auth-service:3001
+      ORGANIZATION_SERVICE_URL: http://organization-service:3002
+      INVENTORY_SERVICE_URL: http://inventory-service:3003
+      WORKER_SERVICE_URL: http://worker-service:8000
+      SUPPLIERS_SERVICE_URL: http://suppliers-service:3009
+      TEAM_SERVICE_URL: http://team-service:3010
+      SHIPMENTS_SERVICE_URL: http://shipments-service:3011
+    depends_on:
+      auth-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      organization-service:
+        condition: service_started
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  # Auth Service (Express)
+  # ─────────────────────────────────────────────
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-inventory_saas}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  # Organization Service (Express)
+  # ─────────────────────────────────────────────
+  organization-service:
+    build:
+      context: .
+      dockerfile: services/organization/Dockerfile
+    ports:
+      - "3002:3002"
+    environment:
+      PORT: 3002
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-inventory_saas}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  # Inventory Service (Express)
+  # ─────────────────────────────────────────────
+  inventory-service:
+    build:
+      context: .
+      dockerfile: services/inventory/Dockerfile
+    ports:
+      - "3003:3003"
+    environment:
+      PORT: 3003
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-inventory_saas}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  # Suppliers Service (Express)
+  # ─────────────────────────────────────────────
+  suppliers-service:
+    build:
+      context: .
+      dockerfile: services/suppliers/Dockerfile
+    ports:
+      - "3009:3009"
+    environment:
+      PORT: 3009
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-inventory_saas}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  # Team Service (Express)
+  # ─────────────────────────────────────────────
+  team-service:
+    build:
+      context: .
+      dockerfile: services/team/Dockerfile
+    ports:
+      - "3010:3010"
+    environment:
+      PORT: 3010
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-inventory_saas}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  # Shipments Service (Express)
+  # ─────────────────────────────────────────────
+  shipments-service:
+    build:
+      context: .
+      dockerfile: services/shipments/Dockerfile
+    ports:
+      - "3011:3011"
+    environment:
+      PORT: 3011
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-inventory_saas}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  # Worker Service (Python/FastAPI - ML + AI)
+  # ─────────────────────────────────────────────
+  worker-service:
+    build:
+      context: services/worker
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-inventory_saas}
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   postgres_data:
