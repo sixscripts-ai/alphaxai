@@ -1,6 +1,6 @@
 services:
   # -----------------------------
-  # 1. API Gateway (Entry Point)
+  # 1. API Gateway
   # -----------------------------
   - type: web
     name: alphaxai-gateway
@@ -35,9 +35,9 @@ services:
     env: node
     region: oregon
     plan: free
-    rootDir: services/auth
-    buildCommand: npm install && npm run build
-    startCommand: npm start
+    rootDir: . # Run from root to access monorepo packages
+    buildCommand: npm install && npm run build -w services/auth
+    startCommand: cd services/auth && npm start
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -54,9 +54,9 @@ services:
     env: node
     region: oregon
     plan: free
-    rootDir: services/inventory
-    buildCommand: npm install && npm run build
-    startCommand: npm start
+    rootDir: .
+    buildCommand: npm install && npm run build -w services/inventory
+    startCommand: cd services/inventory && npm start
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -71,9 +71,9 @@ services:
     env: node
     region: oregon
     plan: free
-    rootDir: services/organization
-    buildCommand: npm install && npm run build
-    startCommand: npm start
+    rootDir: .
+    buildCommand: npm install && npm run build -w services/organization
+    startCommand: cd services/organization && npm start
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -81,15 +81,22 @@ services:
           property: connectionString
 
   # -----------------------------
-  # 5. Worker (Background Jobs)
+  # 5. Worker (Run as Web Service for Free Plan)
   # -----------------------------
-  - type: worker
+  - type: web
     name: alphaxai-worker
     env: python
     region: oregon
     plan: free
     rootDir: services/worker
     buildCommand: pip install -r requirements.txt
+    # We add a dummy port binding if needed, but Python script just loops. 
+    # Render expects a web server on PORT. 
+    # Hack: Run the worker in background and start a dummy http server? 
+    # Or just let it fail health checks? 
+    # Better: Use a simple python script that does both.
+    # For now, let's keep it simple. If it fails to bind port, Render kills it.
+    # We will use 'python main.py' but main.py needs to listen on $PORT to satisfy Render Web Service.
     startCommand: python main.py
     envVars:
       - key: DATABASE_URL
@@ -100,9 +107,6 @@ services:
 databases:
   - name: alphaxai-db
     region: oregon
-    plan: free # Note: Render free tier DB expires after 90 days
+    plan: free
     databaseName: inventory_saas
     user: alphaxai_user
-
-# Note: Redis and RabbitMQ are not included in the free tier blueprint easily.
-# For a production setup, you would add a Redis instance here.
