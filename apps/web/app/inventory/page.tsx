@@ -49,6 +49,7 @@ export default function InventoryPage() {
   const [statusFilter, setStatusFilter] = useState('ALL'); // ALL, LOW_STOCK, OUT_OF_STOCK, ACTIVE
   
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   useEffect(() => {
     fetchItems();
@@ -109,11 +110,31 @@ export default function InventoryPage() {
           </div>
           
           <div className="flex space-x-3">
-             <button className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-medium flex items-center transition-colors text-gray-300">
+             <button 
+                onClick={() => setShowImportModal(true)}
+                className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-medium flex items-center transition-colors text-gray-300">
                 <Upload size={18} className="mr-2" />
                 Import
              </button>
-             <button className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-medium flex items-center transition-colors text-gray-300">
+             <button 
+                onClick={async () => {
+                  try {
+                    const response = await api.get('/api/inventory/items/export', { responseType: 'blob' });
+                    const blob = new Blob([response.data], { type: 'text/csv' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'inventory_export.csv';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                  } catch (err) {
+                    console.error('Export failed', err);
+                    alert('Export failed. Please try again.');
+                  }
+                }}
+                className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-medium flex items-center transition-colors text-gray-300">
                 <Download size={18} className="mr-2" />
                 Export
              </button>
@@ -372,6 +393,13 @@ export default function InventoryPage() {
           <AddItemModal onClose={() => setShowAddModal(false)} onRefresh={fetchItems} />
         )}
       </AnimatePresence>
+
+      {/* Import Modal */}
+      <AnimatePresence>
+        {showImportModal && (
+          <ImportModal onClose={() => setShowImportModal(false)} onRefresh={fetchItems} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -531,6 +559,142 @@ function AddItemModal({ onClose, onRefresh }: { onClose: () => void, onRefresh: 
             </button>
           </div>
         </form>
+      </motion.div>
+    </div>
+  );
+}
+
+function ImportModal({ onClose, onRefresh }: { onClose: () => void, onRefresh: () => void }) {
+  const [csvText, setCsvText] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null);
+
+  const parseCSV = (text: string) => {
+    const lines = text.trim().split('\n');
+    if (lines.length < 2) return [];
+    
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    const items = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+      const item: any = {};
+      headers.forEach((h, idx) => {
+        item[h] = values[idx] || '';
+      });
+      items.push(item);
+    }
+    return items;
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) {
+      setFile(f);
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setCsvText(ev.target?.result as string || '');
+      };
+      reader.readAsText(f);
+    }
+  };
+
+  const handleImport = async () => {
+    if (!csvText.trim()) return;
+    setLoading(true);
+    setResult(null);
+    
+    try {
+      const items = parseCSV(csvText);
+      if (items.length === 0) {
+        setResult({ created: 0, skipped: 0, errors: ['No valid rows found in CSV'] });
+        return;
+      }
+      
+      const response = await api.post('/api/inventory/items/import', { items });
+      setResult(response.data);
+      if (response.data.created > 0) {
+        onRefresh();
+      }
+    } catch (err: any) {
+      setResult({ created: 0, skipped: 0, errors: [err.response?.data?.error || err.message] });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-black/80 backdrop-blur-md"
+        onClick={onClose}
+      />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className="relative bg-[#0f0f0f] border border-white/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl"
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-white">Import Inventory</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
+            <XCircle size={24} />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-2">Upload CSV File</label>
+            <input 
+              type="file"
+              accept=".csv"
+              onChange={handleFileChange}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:bg-blue-600 file:text-white"
+            />
+            <p className="text-xs text-gray-500 mt-2">CSV must have headers: sku, name, unit (optional), category (optional)</p>
+          </div>
+
+          {csvText && (
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1">Preview</label>
+              <pre className="bg-black/40 border border-white/10 rounded-lg p-3 text-xs text-gray-400 max-h-32 overflow-auto font-mono">
+                {csvText.split('\n').slice(0, 6).join('\n')}
+                {csvText.split('\n').length > 6 && `\n... (${csvText.split('\n').length - 1} rows total)`}
+              </pre>
+            </div>
+          )}
+
+          {result && (
+            <div className={`p-4 rounded-lg border ${result.created > 0 ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
+              <p className="text-sm text-white font-medium">
+                {result.created} items imported, {result.skipped} skipped
+              </p>
+              {result.errors.length > 0 && (
+                <ul className="mt-2 text-xs text-gray-400 space-y-1">
+                  {result.errors.map((e, i) => <li key={i}>• {e}</li>)}
+                </ul>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-white/10">
+            <button onClick={onClose} className="px-4 py-2 text-gray-400 hover:text-white transition-colors">
+              {result?.created ? 'Done' : 'Cancel'}
+            </button>
+            <button 
+              onClick={handleImport}
+              disabled={loading || !csvText.trim()}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center shadow-lg shadow-blue-500/20"
+            >
+              {loading ? <Loader2 className="animate-spin mr-2" size={18} /> : <Upload size={18} className="mr-2" />}
+              {loading ? 'Importing...' : 'Import'}
+            </button>
+          </div>
+        </div>
       </motion.div>
     </div>
   );

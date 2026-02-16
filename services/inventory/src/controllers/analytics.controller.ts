@@ -7,7 +7,7 @@ export class AnalyticsController {
   // Query params: locationId (optional), itemId (optional), startDate, endDate
   static async getHistory(req: Request, res: Response) {
     try {
-      const { orgId } = req.user!;
+      const orgId = (req as any).user.orgId;
       const { locationId, itemId, startDate, endDate } = req.query;
 
       let query = `
@@ -64,7 +64,7 @@ export class AnalyticsController {
   // Query params: locationId (optional), itemId (optional)
   static async getForecast(req: Request, res: Response) {
     try {
-      const { orgId } = req.user!;
+      const orgId = (req as any).user.orgId;
       const { locationId, itemId } = req.query;
 
       // For aggregate forecast, we sum up yhat. Confidence intervals are trickier to sum perfectly, 
@@ -114,7 +114,7 @@ export class AnalyticsController {
   // KPI Cards data
   static async getSummary(req: Request, res: Response) {
     try {
-      const { orgId } = req.user!;
+      const orgId = (req as any).user.orgId;
       
       // 1. Total Value (Current)
       // We can get this from items + item_costs or latest snapshot. 

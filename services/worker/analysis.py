@@ -6,82 +6,76 @@ from io import BytesIO
 import json
 import os
 import logging
-from openai import OpenAI
+from google import genai
 
 logger = logging.getLogger("analysis")
 
-# Initialize OpenAI client — uses OPENAI_API_KEY env var automatically
-client = None
+# Initialize Gemini client
+_client = None
 
 
-def _get_openai_client():
-    global client
-    if client is None:
-        api_key = os.getenv("OPENAI_API_KEY")
+def _get_gemini_client():
+    global _client
+    if _client is None:
+        api_key = os.getenv("GEMINI_API_KEY")
         if api_key:
-            client = OpenAI(api_key=api_key)
+            _client = genai.Client(api_key=api_key)
         else:
-            logger.warning("OPENAI_API_KEY not set — AI insights will be unavailable")
-    return client
+            logger.warning("GEMINI_API_KEY not set — AI insights will be unavailable")
+    return _client
 
 
 def _generate_ai_insights(summary: dict, columns_profile: list, anomalies: list, correlations: dict, sample_rows: list) -> dict:
-    """Call OpenAI GPT-4o-mini to generate real AI-powered insights from the data profile."""
-    ai_client = _get_openai_client()
-    if not ai_client:
+    """Call Gemini 2.5 Pro to generate real AI-powered insights from the data profile."""
+    client = _get_gemini_client()
+    if not client:
         return {
-            "ai_summary": "AI insights unavailable — OPENAI_API_KEY not configured.",
+            "ai_summary": "AI insights unavailable — GEMINI_API_KEY not configured.",
             "ai_insights": []
         }
 
     # Build a compact data profile for the LLM
-    # Trim correlations to only strong ones (|r| > 0.7)
     strong_corr = {k: round(v, 3) for k, v in correlations.items() if abs(v) > 0.7 and "::" in k and k.split("::")[0] != k.split("::")[1]}
 
     data_profile = json.dumps({
         "summary": summary,
-        "columns": columns_profile[:30],  # cap at 30 columns
+        "columns": columns_profile[:30],
         "anomaly_count": len(anomalies),
         "strong_correlations": dict(list(strong_corr.items())[:20]),
         "sample_rows": sample_rows[:3],
     }, default=str, indent=2)
 
+    system_prompt = (
+        "You are an expert data analyst AI agent. You receive a statistical profile of an uploaded dataset "
+        "and produce a concise executive summary plus actionable insights.\n\n"
+        "Rules:\n"
+        "- Be specific and reference actual column names, values, and numbers.\n"
+        "- Categorize each insight with a type (Data Quality, Trend, Anomaly, Recommendation, Optimization) and severity (High, Medium, Low).\n"
+        "- Return ONLY valid JSON in this exact format:\n"
+        '{\n'
+        '  "ai_summary": "2-3 sentence executive summary of the dataset",\n'
+        '  "ai_insights": [\n'
+        '    {"type": "...", "severity": "...", "message": "..."}\n'
+        '  ]\n'
+        '}'
+    )
+
     try:
-        response = ai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are an expert data analyst AI agent. You receive a statistical profile of an uploaded dataset "
-                        "and produce a concise executive summary plus actionable insights.\n\n"
-                        "Rules:\n"
-                        "- Be specific and reference actual column names, values, and numbers.\n"
-                        "- Categorize each insight with a type (Data Quality, Trend, Anomaly, Recommendation, Optimization) and severity (High, Medium, Low).\n"
-                        "- Return ONLY valid JSON in this exact format:\n"
-                        '{\n'
-                        '  "ai_summary": "2-3 sentence executive summary of the dataset",\n'
-                        '  "ai_insights": [\n'
-                        '    {"type": "...", "severity": "...", "message": "..."}\n'
-                        '  ]\n'
-                        '}'
-                    )
-                },
-                {
-                    "role": "user",
-                    "content": f"Analyze this dataset profile and provide insights:\n\n{data_profile}"
-                }
-            ],
-            temperature=0.3,
-            max_tokens=1500,
-            response_format={"type": "json_object"}
+        response = client.models.generate_content(
+            model="gemini-2.5-pro-preview-06-05",
+            contents=f"{system_prompt}\n\nAnalyze this dataset profile and provide insights:\n\n{data_profile}",
+            config={
+                "temperature": 0.3,
+                "max_output_tokens": 1500,
+                "response_mime_type": "application/json",
+            },
         )
 
-        result_text = response.choices[0].message.content
+        result_text = response.text
         return json.loads(result_text)
 
     except Exception as e:
-        logger.error(f"OpenAI API error: {e}")
+        logger.error(f"Gemini API error: {e}")
         return {
             "ai_summary": f"AI analysis encountered an error: {str(e)}",
             "ai_insights": []

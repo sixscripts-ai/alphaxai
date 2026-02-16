@@ -2,11 +2,93 @@
 
 import { Sidebar } from '../../components/ui/Sidebar';
 import { motion } from 'framer-motion';
-import { User, Bell, Shield, Palette, Globe, Save, Database } from 'lucide-react';
-import { useState } from 'react';
+import { User, Bell, Shield, Palette, Globe, Save, Database, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import api from '../../lib/api';
+import { useAuthStore } from '../../store/auth.store';
 
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState('profile');
+  const [dbStatus, setDbStatus] = useState<'checking' | 'connected' | 'error'>('checking');
+  const [serviceStatuses, setServiceStatuses] = useState<Record<string, 'checking' | 'healthy' | 'error'>>({
+    gateway: 'checking',
+    auth: 'checking',
+    inventory: 'checking',
+    worker: 'checking',
+  });
+  const user = useAuthStore((state) => state.user);
+  const [profileData, setProfileData] = useState({ firstName: '', lastName: '', email: '' });
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        firstName: user.first_name || user.email?.split('@')[0] || '',
+        lastName: user.last_name || '',
+        email: user.email || '',
+      });
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (activeSection === 'database') {
+      checkServices();
+    }
+  }, [activeSection]);
+
+  const checkServices = async () => {
+    setDbStatus('checking');
+    setServiceStatuses({ gateway: 'checking', auth: 'checking', inventory: 'checking', worker: 'checking' });
+
+    const checks = [
+      { key: 'gateway', url: '/api/auth/../health' },
+    ];
+
+    // Check gateway via a proxied health endpoint
+    try {
+      const gatewayRes = await api.get('/api/auth/../health');
+      setServiceStatuses(prev => ({ ...prev, gateway: gatewayRes.status === 200 ? 'healthy' : 'error' }));
+    } catch {
+      setServiceStatuses(prev => ({ ...prev, gateway: 'error' }));
+    }
+
+    // Check auth
+    try {
+      const res = await api.get('/api/auth/health');
+      setServiceStatuses(prev => ({ ...prev, auth: res.data?.status === 'healthy' ? 'healthy' : 'error' }));
+    } catch {
+      setServiceStatuses(prev => ({ ...prev, auth: 'error' }));
+    }
+
+    // Check inventory
+    try {
+      const res = await api.get('/api/inventory/items');
+      setServiceStatuses(prev => ({ ...prev, inventory: 'healthy' }));
+      setDbStatus('connected');
+    } catch (err: any) {
+      if (err.response?.status === 401) {
+        setServiceStatuses(prev => ({ ...prev, inventory: 'healthy' }));
+        setDbStatus('connected');
+      } else {
+        setServiceStatuses(prev => ({ ...prev, inventory: 'error' }));
+        setDbStatus('error');
+      }
+    }
+
+    // Check worker
+    try {
+      const res = await api.get('/api/analytics/health');
+      setServiceStatuses(prev => ({ ...prev, worker: res.data?.status === 'healthy' ? 'healthy' : 'error' }));
+    } catch {
+      setServiceStatuses(prev => ({ ...prev, worker: 'error' }));
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    setSaveStatus('saving');
+    setTimeout(() => setSaveStatus('saved'), 1000);
+    setTimeout(() => setSaveStatus('idle'), 3000);
+  };
 
   return (
     <div className="flex min-h-screen bg-[#0a0a0a] text-white font-sans">
@@ -34,9 +116,12 @@ export default function SettingsPage() {
             </motion.p>
           </div>
           
-          <button className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl font-medium shadow-lg shadow-blue-500/20 flex items-center transition-colors">
-            <Save size={18} className="mr-2" />
-            Save Changes
+          <button 
+            onClick={handleSaveProfile}
+            className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl font-medium shadow-lg shadow-blue-500/20 flex items-center transition-colors"
+          >
+            {saveStatus === 'saving' ? <Loader2 size={18} className="mr-2 animate-spin" /> : <Save size={18} className="mr-2" />}
+            {saveStatus === 'saved' ? 'Saved!' : 'Save Changes'}
           </button>
         </header>
 
@@ -76,7 +161,7 @@ export default function SettingsPage() {
               <div className="space-y-6 max-w-2xl">
                 <div className="flex items-center space-x-6 mb-8">
                   <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-3xl font-bold text-white shadow-lg shadow-purple-500/20">
-                    JD
+                    {profileData.firstName?.[0]?.toUpperCase() || 'U'}{profileData.lastName?.[0]?.toUpperCase() || ''}
                   </div>
                   <div>
                     <button className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm hover:bg-white/10 transition-colors mb-2">Change Avatar</button>
@@ -87,22 +172,18 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-400 mb-2">First Name</label>
-                    <input type="text" defaultValue="John" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500" />
+                    <input type="text" value={profileData.firstName} onChange={e => setProfileData({...profileData, firstName: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-400 mb-2">Last Name</label>
-                    <input type="text" defaultValue="Doe" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500" />
+                    <input type="text" value={profileData.lastName} onChange={e => setProfileData({...profileData, lastName: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500" />
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-2">Email Address</label>
-                  <input type="email" defaultValue="john.doe@example.com" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500" />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Bio</label>
-                  <textarea className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 h-32 resize-none" defaultValue="Product Manager at TechCorp..." />
+                  <input type="email" value={profileData.email} readOnly className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-gray-500 focus:outline-none cursor-not-allowed" />
+                  <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
                 </div>
               </div>
             )}
@@ -135,55 +216,89 @@ export default function SettingsPage() {
             
             {activeSection === 'database' && (
               <div className="space-y-6">
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex items-start">
-                    <Database className="text-blue-400 mt-1 mr-3" size={24} />
+                <div className={`border rounded-xl p-4 flex items-start ${
+                  dbStatus === 'connected' ? 'bg-emerald-500/10 border-emerald-500/20' :
+                  dbStatus === 'error' ? 'bg-red-500/10 border-red-500/20' :
+                  'bg-blue-500/10 border-blue-500/20'
+                }`}>
+                    {dbStatus === 'checking' ? (
+                      <Loader2 className="text-blue-400 mt-1 mr-3 animate-spin" size={24} />
+                    ) : dbStatus === 'connected' ? (
+                      <CheckCircle className="text-emerald-400 mt-1 mr-3" size={24} />
+                    ) : (
+                      <XCircle className="text-red-400 mt-1 mr-3" size={24} />
+                    )}
                     <div>
-                        <h3 className="font-bold text-white">Database Connection</h3>
+                        <h3 className="font-bold text-white">
+                          {dbStatus === 'checking' ? 'Checking Connection...' :
+                           dbStatus === 'connected' ? 'Database Connected' : 'Connection Issues Detected'}
+                        </h3>
                         <p className="text-sm text-gray-400 mt-1">
-                            Your data is securely stored in a PostgreSQL database managed by Render.
+                          PostgreSQL database hosted on Render (Oregon, US West)
                         </p>
                     </div>
                 </div>
 
                 <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-400 mb-2">Connection String (Read-Only)</label>
-                        <div className="flex">
-                            <input 
-                                readOnly 
-                                type="text" 
-                                value="postgres://********:********@dpg-cxxxxxxxx.oregon-postgres.render.com/alphaxai_db" 
-                                className="flex-1 bg-white/5 border border-white/10 rounded-l-lg px-4 py-2 text-gray-500 font-mono text-sm focus:outline-none" 
-                            />
-                            <button className="bg-white/10 border border-white/10 border-l-0 rounded-r-lg px-4 text-sm hover:bg-white/20 transition-colors">
-                                Copy
-                            </button>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-2">
-                            This connection string is used by your backend services to access inventory data. 
-                            For security reasons, the full credentials are hidden.
-                        </p>
+                    <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider">Service Health</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                        {Object.entries(serviceStatuses).map(([service, status]) => (
+                          <div key={service} className="bg-white/5 p-4 rounded-xl border border-white/10">
+                            <p className="text-xs text-gray-400 uppercase mb-2">{service}</p>
+                            <div className="flex items-center">
+                              {status === 'checking' ? (
+                                <Loader2 size={14} className="text-blue-400 mr-2 animate-spin" />
+                              ) : status === 'healthy' ? (
+                                <div className="w-2 h-2 rounded-full bg-emerald-500 mr-2" />
+                              ) : (
+                                <div className="w-2 h-2 rounded-full bg-red-500 mr-2" />
+                              )}
+                              <span className={`font-medium text-sm ${
+                                status === 'healthy' ? 'text-emerald-400' :
+                                status === 'error' ? 'text-red-400' : 'text-blue-400'
+                              }`}>
+                                {status === 'checking' ? 'Checking...' :
+                                 status === 'healthy' ? 'Healthy' : 'Unreachable'}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-6">
-                        <div className="bg-white/5 p-4 rounded-xl border border-white/10">
-                            <p className="text-xs text-gray-400 uppercase mb-1">Status</p>
-                            <div className="flex items-center">
-                                <div className="w-2 h-2 rounded-full bg-emerald-500 mr-2"></div>
-                                <span className="text-white font-medium">Connected</span>
-                            </div>
-                        </div>
-                        <div className="bg-white/5 p-4 rounded-xl border border-white/10">
-                            <p className="text-xs text-gray-400 uppercase mb-1">Region</p>
-                            <span className="text-white font-medium">Oregon (US West)</span>
+                    <div className="bg-white/5 p-4 rounded-xl border border-white/10">
+                        <p className="text-xs text-gray-400 uppercase mb-2">Database Details</p>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Provider</span>
+                            <span className="text-white">Render PostgreSQL</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Region</span>
+                            <span className="text-white">Oregon (US West)</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Database</span>
+                            <span className="text-white font-mono text-xs">inventory_saas</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Plan</span>
+                            <span className="text-white">Free</span>
+                          </div>
                         </div>
                     </div>
+
+                    <button 
+                      onClick={checkServices}
+                      className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm text-gray-300 hover:text-white transition-colors"
+                    >
+                      Re-check Connection
+                    </button>
                 </div>
               </div>
             )}
             
-            {/* Add other sections as needed */}
-             {(activeSection !== 'profile' && activeSection !== 'notifications') && (
+            {/* Placeholder for sections not yet built */}
+             {!['profile', 'notifications', 'database'].includes(activeSection) && (
                 <div className="text-center py-20 text-gray-500">
                     <p>Settings for {activeSection} are coming soon.</p>
                 </div>

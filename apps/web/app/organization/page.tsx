@@ -3,14 +3,14 @@
 import { useEffect, useState } from 'react';
 import { Sidebar } from '../../components/ui/Sidebar';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building, MapPin, Users, Plus, Mail, Phone, MoreHorizontal } from 'lucide-react';
+import { Building, MapPin, Users, Plus, Mail, Phone, MoreHorizontal, Globe, Loader2 } from 'lucide-react';
 import api from '../../lib/api';
 
 interface Location {
   id: string;
   name: string;
-  address: string;
-  contact_info: any;
+  code?: string;
+  timezone?: string;
 }
 
 interface User {
@@ -160,13 +160,15 @@ function LocationCard({ location, index }: { location: Location, index: number }
       <h3 className="text-xl font-bold text-white mb-2">{location.name}</h3>
       
       <div className="space-y-3 text-gray-400 text-sm">
-        <div className="flex items-start">
-          <MapPin size={16} className="mr-2 mt-0.5 shrink-0" />
-          {location.address || 'No address provided'}
-        </div>
+        {location.code && (
+          <div className="flex items-center">
+            <MapPin size={16} className="mr-2 shrink-0" />
+            Code: {location.code}
+          </div>
+        )}
         <div className="flex items-center">
-          <Phone size={16} className="mr-2" />
-          {location.contact_info?.phone || 'No phone'}
+          <Globe size={16} className="mr-2" />
+          {location.timezone || 'America/Los_Angeles'}
         </div>
       </div>
     </motion.div>
@@ -207,18 +209,21 @@ function UserCard({ user, index }: { user: User, index: number }) {
 
 function AddLocationModal({ onClose, onRefresh }: { onClose: () => void, onRefresh: () => void }) {
     const [name, setName] = useState('');
-    const [address, setAddress] = useState('');
+    const [code, setCode] = useState('');
+    const [timezone, setTimezone] = useState('America/Los_Angeles');
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+        setError('');
         try {
-            await api.post('/api/locations', { name, address });
+            await api.post('/api/locations', { name, code: code || undefined, timezone });
             onRefresh();
             onClose();
-        } catch (error) {
-            console.error(error);
+        } catch (err: any) {
+            setError(err.response?.data?.error || 'Failed to create location');
         } finally {
             setLoading(false);
         }
@@ -233,23 +238,51 @@ function AddLocationModal({ onClose, onRefresh }: { onClose: () => void, onRefre
                 className="relative bg-[#111] border border-white/10 rounded-2xl p-6 w-full max-w-md"
             >
                 <h2 className="text-xl font-bold text-white mb-4">Add Location</h2>
+                {error && <p className="text-red-400 text-sm mb-3 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>}
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <input 
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
-                        placeholder="Location Name"
-                        value={name}
-                        onChange={e => setName(e.target.value)}
-                        required
-                    />
-                    <input 
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
-                        placeholder="Address"
-                        value={address}
-                        onChange={e => setAddress(e.target.value)}
-                    />
+                    <div>
+                        <label className="block text-sm text-gray-400 mb-1">Location Name *</label>
+                        <input 
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-orange-500"
+                            placeholder="e.g. Main Warehouse"
+                            value={name}
+                            onChange={e => setName(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm text-gray-400 mb-1">Location Code</label>
+                        <input 
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-orange-500"
+                            placeholder="e.g. WH-001"
+                            value={code}
+                            onChange={e => setCode(e.target.value)}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm text-gray-400 mb-1">Timezone</label>
+                        <select
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-orange-500"
+                            value={timezone}
+                            onChange={e => setTimezone(e.target.value)}
+                        >
+                            <option value="America/Los_Angeles">Pacific Time (US)</option>
+                            <option value="America/Denver">Mountain Time (US)</option>
+                            <option value="America/Chicago">Central Time (US)</option>
+                            <option value="America/New_York">Eastern Time (US)</option>
+                            <option value="Europe/London">London (GMT)</option>
+                            <option value="Europe/Berlin">Central European</option>
+                            <option value="Asia/Tokyo">Japan</option>
+                            <option value="Asia/Shanghai">China</option>
+                            <option value="UTC">UTC</option>
+                        </select>
+                    </div>
                     <div className="flex justify-end space-x-2 mt-4">
-                        <button type="button" onClick={onClose} className="px-4 py-2 text-gray-400">Cancel</button>
-                        <button type="submit" disabled={loading} className="px-4 py-2 bg-blue-600 rounded-lg text-white">Create</button>
+                        <button type="button" onClick={onClose} className="px-4 py-2 text-gray-400 hover:text-white transition-colors">Cancel</button>
+                        <button type="submit" disabled={loading} className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-600 rounded-lg text-white font-medium disabled:opacity-50 flex items-center">
+                            {loading && <Loader2 size={16} className="mr-2 animate-spin" />}
+                            Create
+                        </button>
                     </div>
                 </form>
             </motion.div>

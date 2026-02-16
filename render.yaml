@@ -96,8 +96,8 @@ services:
         fromDatabase:
           name: alphaxai-db
           property: connectionString
-      - key: OPENAI_API_KEY
-        sync: false  # Set manually in Render dashboard
+      - key: GEMINI_API_KEY
+        value: AIzaSyCefpO-NUEQHiUaLBKuiiOftkRCCIevWIE
       - key: PYTHON_VERSION
         value: 3.11.0
 

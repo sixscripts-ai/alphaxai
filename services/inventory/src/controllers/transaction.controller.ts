@@ -15,7 +15,7 @@ export const createTransaction = async (req: Request, res: Response) => {
   const client = await getClient();
   try {
     const { itemId, locationId, type, quantity, reason, referenceId } = transactionSchema.parse(req.body);
-    const orgId = (req as any).user.organizationId;
+    const orgId = (req as any).user.orgId;
 
     await client.query('BEGIN');
 

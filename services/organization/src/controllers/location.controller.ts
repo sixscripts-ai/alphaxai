@@ -13,10 +13,10 @@ const updateLocationSchema = createLocationSchema.partial();
 export const createLocation = async (req: Request, res: Response) => {
   try {
     const { name, code, timezone } = createLocationSchema.parse(req.body);
-    const orgId = (req as any).user.organizationId; 
+    const orgId = (req as any).user.orgId; 
 
     const result = await query(
-      'INSERT INTO locations (organization_id, name, code, timezone) VALUES ($1, $2, $3, $4) RETURNING *',
+      'INSERT INTO locations (org_id, name, code, timezone) VALUES ($1, $2, $3, $4) RETURNING *',
       [orgId, name, code, timezone]
     );
     const location = result.rows[0];
@@ -36,9 +36,9 @@ export const createLocation = async (req: Request, res: Response) => {
 
 export const getLocations = async (req: Request, res: Response) => {
   try {
-    const orgId = (req as any).user.organizationId;
+    const orgId = (req as any).user.orgId;
 
-    const result = await query('SELECT * FROM locations WHERE organization_id = $1', [orgId]);
+    const result = await query('SELECT * FROM locations WHERE org_id = $1', [orgId]);
     const locations = result.rows;
 
     res.json(locations);
@@ -51,10 +51,10 @@ export const getLocations = async (req: Request, res: Response) => {
 export const getLocation = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const orgId = (req as any).user.organizationId;
+    const orgId = (req as any).user.orgId;
 
     const result = await query(
-      'SELECT * FROM locations WHERE id = $1 AND organization_id = $2',
+      'SELECT * FROM locations WHERE id = $1 AND org_id = $2',
       [id, orgId]
     );
     const location = result.rows[0];
@@ -74,11 +74,11 @@ export const updateLocation = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { name, code, timezone } = updateLocationSchema.parse(req.body);
-    const orgId = (req as any).user.organizationId;
+    const orgId = (req as any).user.orgId;
 
     // First check existence
     const check = await query(
-      'SELECT id FROM locations WHERE id = $1 AND organization_id = $2',
+      'SELECT id FROM locations WHERE id = $1 AND org_id = $2',
       [id, orgId]
     );
     if (check.rows.length === 0) {
@@ -90,7 +90,7 @@ export const updateLocation = async (req: Request, res: Response) => {
        SET name = COALESCE($1, name), 
            code = COALESCE($2, code), 
            timezone = COALESCE($3, timezone)
-       WHERE id = $4 AND organization_id = $5
+       WHERE id = $4 AND org_id = $5
        RETURNING *`,
       [name, code, timezone, id, orgId]
     );

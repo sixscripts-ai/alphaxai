@@ -72,9 +72,9 @@ export default function DashboardPage() {
     const fetchData = async () => {
       try {
         const [summaryRes, forecastRes, locationsRes] = await Promise.all([
-          api.get('/inventory/analytics/summary'),
-          api.get('/inventory/analytics/forecast'),
-          api.get('/locations') // Correct endpoint from gateway
+          api.get('/api/inventory/analytics/summary'),
+          api.get('/api/inventory/analytics/forecast'),
+          api.get('/api/locations')
         ]);
         
         const summary = summaryRes.data;
