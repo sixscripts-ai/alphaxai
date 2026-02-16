@@ -21,15 +21,30 @@ app.add_middleware(
 
 # Service URLs - Print startup config
 logger.info("Initializing Gateway with Service URLs:")
+
+def get_service_url(key, default_name, port):
+    # Try to get from Env Var (Render injection)
+    url = os.getenv(key)
+    if url:
+        return url
+    
+    # If not set, check if we are on Render (RENDER env var is usually set, or we guess)
+    if os.getenv("RENDER"):
+        # Fallback to Render public URL convention
+        return f"https://alphaxai-{default_name}.onrender.com"
+    
+    # Fallback to local Docker default
+    return f"http://{default_name}-service:{port}"
+
 SERVICES = {
-    "auth": os.getenv("AUTH_SERVICE_URL", "http://auth-service:3001"),
-    "organization": os.getenv("ORGANIZATION_SERVICE_URL", "http://organization-service:3002"),
-    "inventory": os.getenv("INVENTORY_SERVICE_URL", "http://inventory-service:3003"),
-    "usage": os.getenv("USAGE_SERVICE_URL", "http://usage-service:3004"),
-    "alert": os.getenv("ALERT_SERVICE_URL", "http://alert-service:3005"),
-    "audit": os.getenv("AUDIT_SERVICE_URL", "http://audit-service:3006"),
-    "billing": os.getenv("BILLING_SERVICE_URL", "http://billing-service:3007"),
-    "integration": os.getenv("INTEGRATION_SERVICE_URL", "http://integration-service:3008"),
+    "auth": get_service_url("AUTH_SERVICE_URL", "auth", 3001),
+    "organization": get_service_url("ORGANIZATION_SERVICE_URL", "organization", 3002),
+    "inventory": get_service_url("INVENTORY_SERVICE_URL", "inventory", 3003),
+    "usage": get_service_url("USAGE_SERVICE_URL", "usage", 3004),
+    "alert": get_service_url("ALERT_SERVICE_URL", "alert", 3005),
+    "audit": get_service_url("AUDIT_SERVICE_URL", "audit", 3006),
+    "billing": get_service_url("BILLING_SERVICE_URL", "billing", 3007),
+    "integration": get_service_url("INTEGRATION_SERVICE_URL", "integration", 3008),
 }
 for name, url in SERVICES.items():
     logger.info(f"  {name.upper()}: {url}")
