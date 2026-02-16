@@ -81,7 +81,7 @@ async def proxy_request(service_url: str, path: str, request: Request):
                 
         except httpx.RequestError as exc:
             logger.error(f"Proxy connection error: {exc}")
-            return JSONResponse(content={"error": f"Service unavailable: {exc}"}, status_code=503)
+            return JSONResponse(content={"error": f"Service unavailable: {exc}", "url": url}, status_code=503)
         except Exception as exc:
             logger.error(f"Unexpected proxy error: {exc}")
             return JSONResponse(content={"error": str(exc)}, status_code=500)
