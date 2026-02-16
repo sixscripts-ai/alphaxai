@@ -14,7 +14,9 @@ import {
   Menu, 
   ChevronLeft,
   LogOut,
-  ShoppingCart
+  ShoppingCart,
+  Truck,
+  FileText
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -22,6 +24,9 @@ const menuItems = [
   { name: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
   { name: 'Inventory', icon: Package, href: '/inventory' },
   { name: 'Orders', icon: ShoppingCart, href: '/orders' },
+  { name: 'Suppliers', icon: Truck, href: '/suppliers' },
+  { name: 'Shipments', icon: Truck, href: '/shipments' },
+  { name: 'Team', icon: Users, href: '/team' },
   { name: 'Analytics', icon: BarChart, href: '/analytics' },
   { name: 'Organization', icon: Users, href: '/organization' },
   { name: 'Alerts', icon: Bell, href: '/alerts' },

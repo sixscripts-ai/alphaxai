@@ -23,6 +23,12 @@ services:
         value: https://alphaxai-organization.onrender.com
       - key: WORKER_SERVICE_URL
         value: https://alphaxai-worker.onrender.com
+      - key: SUPPLIERS_SERVICE_URL
+        value: https://alphaxai-suppliers.onrender.com
+      - key: TEAM_SERVICE_URL
+        value: https://alphaxai-team.onrender.com
+      - key: SHIPMENTS_SERVICE_URL
+        value: https://alphaxai-shipments.onrender.com
       - key: PYTHON_VERSION
         value: 3.11.0
 
@@ -100,6 +106,57 @@ services:
         value: a0ab9e13b25f434faa0c67d79a0ef08d.zeYmXn9Mq8tQkU0SWwU24T0q
       - key: PYTHON_VERSION
         value: 3.11.0
+
+  # -----------------------------
+  # 6. Suppliers Service
+  # -----------------------------
+  - type: web
+    name: alphaxai-suppliers
+    env: node
+    region: oregon
+    plan: free
+    rootDir: .
+    buildCommand: npm install && npm run build -w packages/database && npm run build -w packages/logger && npm run build -w services/suppliers
+    startCommand: cd services/suppliers && npm start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: alphaxai-db
+          property: connectionString
+
+  # -----------------------------
+  # 7. Team Service
+  # -----------------------------
+  - type: web
+    name: alphaxai-team
+    env: node
+    region: oregon
+    plan: free
+    rootDir: .
+    buildCommand: npm install && npm run build -w packages/database && npm run build -w packages/logger && npm run build -w services/team
+    startCommand: cd services/team && npm start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: alphaxai-db
+          property: connectionString
+
+  # -----------------------------
+  # 8. Shipments Service
+  # -----------------------------
+  - type: web
+    name: alphaxai-shipments
+    env: node
+    region: oregon
+    plan: free
+    rootDir: .
+    buildCommand: npm install && npm run build -w packages/database && npm run build -w packages/logger && npm run build -w services/shipments
+    startCommand: cd services/shipments && npm start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: alphaxai-db
+          property: connectionString
 
 databases:
   - name: alphaxai-db

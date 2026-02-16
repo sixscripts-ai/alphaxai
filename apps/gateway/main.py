@@ -49,6 +49,9 @@ SERVICES = {
     "billing": get_service_url("BILLING_SERVICE_URL", "billing", 3007),
     "integration": get_service_url("INTEGRATION_SERVICE_URL", "integration", 3008),
     "worker": get_service_url("WORKER_SERVICE_URL", "worker", 8000),
+    "suppliers": get_service_url("SUPPLIERS_SERVICE_URL", "suppliers", 3009),
+    "team": get_service_url("TEAM_SERVICE_URL", "team", 3010),
+    "shipments": get_service_url("SHIPMENTS_SERVICE_URL", "shipments", 3011),
 }
 for name, url in SERVICES.items():
     logger.info(f"  {name.upper()}: {url}")
@@ -152,3 +155,30 @@ async def analytics_proxy(path: str, request: Request):
 @app.api_route("/api/analytics", methods=["GET", "POST"])
 async def analytics_root_proxy(request: Request):
     return await proxy_request(SERVICES["worker"], "/", request)
+
+# Suppliers Routes
+@app.api_route("/api/suppliers/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def suppliers_proxy(path: str, request: Request):
+    return await proxy_request(SERVICES["suppliers"], f"/api/suppliers/{path}", request)
+
+@app.api_route("/api/suppliers", methods=["GET", "POST"])
+async def suppliers_root_proxy(request: Request):
+    return await proxy_request(SERVICES["suppliers"], "/api/suppliers", request)
+
+# Team Routes
+@app.api_route("/api/team/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def team_proxy(path: str, request: Request):
+    return await proxy_request(SERVICES["team"], f"/api/team/{path}", request)
+
+@app.api_route("/api/team", methods=["GET", "POST"])
+async def team_root_proxy(request: Request):
+    return await proxy_request(SERVICES["team"], "/api/team", request)
+
+# Shipments Routes
+@app.api_route("/api/shipments/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def shipments_proxy(path: str, request: Request):
+    return await proxy_request(SERVICES["shipments"], f"/api/shipments/{path}", request)
+
+@app.api_route("/api/shipments", methods=["GET", "POST"])
+async def shipments_root_proxy(request: Request):
+    return await proxy_request(SERVICES["shipments"], "/api/shipments", request)

@@ -299,3 +299,64 @@ CREATE TABLE subscriptions (
   current_period_end timestamptz,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- =========================
+-- Suppliers Extended
+-- =========================
+CREATE TABLE supplier_categories (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  supplier_id uuid NOT NULL REFERENCES suppliers(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (supplier_id, name)
+);
+
+-- =========================
+-- Shipments
+-- =========================
+CREATE TABLE shipments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  tracking_number text UNIQUE NOT NULL,
+  carrier text NOT NULL,
+  status text NOT NULL DEFAULT 'PICKED_UP',
+  origin text NOT NULL,
+  destination text NOT NULL,
+  estimated_delivery date,
+  actual_delivery date,
+  weight numeric(10,2),
+  dimensions text,
+  cost numeric(12,2) NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_shipments_org ON shipments (org_id);
+CREATE INDEX idx_shipments_tracking ON shipments (tracking_number);
+
+CREATE TABLE shipment_items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  shipment_id uuid NOT NULL REFERENCES shipments(id) ON DELETE CASCADE,
+  item_id uuid NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  quantity numeric(18,4) NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- =========================
+-- Audit Logs (for Team Activity)
+-- =========================
+CREATE TABLE audit_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  action text NOT NULL,
+  entity_type text,
+  entity_id uuid,
+  details jsonb,
+  ip_address inet,
+  user_agent text,
+  occurred_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_audit_org_user ON audit_logs (org_id, user_id);
+CREATE INDEX idx_audit_occurred ON audit_logs (occurred_at DESC);
