@@ -66,7 +66,7 @@ async def proxy_request(service_url: str, path: str, request: Request):
     logger.info(f"Proxying {request.method} request to: {url}")
     
     # Increase timeout and follow redirects
-    async with httpx.AsyncClient(follow_redirects=True, timeout=60.0) as client:
+    async with httpx.AsyncClient(follow_redirects=True, timeout=300.0) as client:
         try:
             # Forward request
             content = await request.body()
@@ -145,6 +145,10 @@ async def inventory_root_proxy(request: Request):
     return await proxy_request(SERVICES["inventory"], "/api/inventory", request)
 
 # Analytics/Worker Routes
-@app.api_route("/api/analytics/{path:path}", methods=["GET", "POST"])
+@app.api_route("/api/analytics/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
 async def analytics_proxy(path: str, request: Request):
     return await proxy_request(SERVICES["worker"], f"/{path}", request)
+
+@app.api_route("/api/analytics", methods=["GET", "POST"])
+async def analytics_root_proxy(request: Request):
+    return await proxy_request(SERVICES["worker"], "/", request)

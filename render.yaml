@@ -21,6 +21,8 @@ services:
         value: https://alphaxai-inventory.onrender.com
       - key: ORGANIZATION_SERVICE_URL
         value: https://alphaxai-organization.onrender.com
+      - key: WORKER_SERVICE_URL
+        value: https://alphaxai-worker.onrender.com
       - key: PYTHON_VERSION
         value: 3.11.0
 
@@ -94,6 +96,8 @@ services:
         fromDatabase:
           name: alphaxai-db
           property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false  # Set manually in Render dashboard
       - key: PYTHON_VERSION
         value: 3.11.0
 

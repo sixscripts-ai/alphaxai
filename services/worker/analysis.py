@@ -4,6 +4,89 @@ from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
 from io import BytesIO
 import json
+import os
+import logging
+from openai import OpenAI
+
+logger = logging.getLogger("analysis")
+
+# Initialize OpenAI client — uses OPENAI_API_KEY env var automatically
+client = None
+
+
+def _get_openai_client():
+    global client
+    if client is None:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if api_key:
+            client = OpenAI(api_key=api_key)
+        else:
+            logger.warning("OPENAI_API_KEY not set — AI insights will be unavailable")
+    return client
+
+
+def _generate_ai_insights(summary: dict, columns_profile: list, anomalies: list, correlations: dict, sample_rows: list) -> dict:
+    """Call OpenAI GPT-4o-mini to generate real AI-powered insights from the data profile."""
+    ai_client = _get_openai_client()
+    if not ai_client:
+        return {
+            "ai_summary": "AI insights unavailable — OPENAI_API_KEY not configured.",
+            "ai_insights": []
+        }
+
+    # Build a compact data profile for the LLM
+    # Trim correlations to only strong ones (|r| > 0.7)
+    strong_corr = {k: round(v, 3) for k, v in correlations.items() if abs(v) > 0.7 and "::" in k and k.split("::")[0] != k.split("::")[1]}
+
+    data_profile = json.dumps({
+        "summary": summary,
+        "columns": columns_profile[:30],  # cap at 30 columns
+        "anomaly_count": len(anomalies),
+        "strong_correlations": dict(list(strong_corr.items())[:20]),
+        "sample_rows": sample_rows[:3],
+    }, default=str, indent=2)
+
+    try:
+        response = ai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are an expert data analyst AI agent. You receive a statistical profile of an uploaded dataset "
+                        "and produce a concise executive summary plus actionable insights.\n\n"
+                        "Rules:\n"
+                        "- Be specific and reference actual column names, values, and numbers.\n"
+                        "- Categorize each insight with a type (Data Quality, Trend, Anomaly, Recommendation, Optimization) and severity (High, Medium, Low).\n"
+                        "- Return ONLY valid JSON in this exact format:\n"
+                        '{\n'
+                        '  "ai_summary": "2-3 sentence executive summary of the dataset",\n'
+                        '  "ai_insights": [\n'
+                        '    {"type": "...", "severity": "...", "message": "..."}\n'
+                        '  ]\n'
+                        '}'
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": f"Analyze this dataset profile and provide insights:\n\n{data_profile}"
+                }
+            ],
+            temperature=0.3,
+            max_tokens=1500,
+            response_format={"type": "json_object"}
+        )
+
+        result_text = response.choices[0].message.content
+        return json.loads(result_text)
+
+    except Exception as e:
+        logger.error(f"OpenAI API error: {e}")
+        return {
+            "ai_summary": f"AI analysis encountered an error: {str(e)}",
+            "ai_insights": []
+        }
+
 
 def analyze_dataset(file_content: bytes, filename: str) -> dict:
     try:
@@ -54,8 +137,8 @@ def analyze_dataset(file_content: bytes, filename: str) -> dict:
 
         # 4. Anomaly Detection (Numeric only)
         anomalies = []
+        anomaly_indices = []
         if len(numeric_cols) > 0 and len(df) > 10:
-            # Fill NA for isolation forest
             df_numeric = df[numeric_cols].fillna(0)
             scaler = StandardScaler()
             X = scaler.fit_transform(df_numeric)
@@ -63,45 +146,79 @@ def analyze_dataset(file_content: bytes, filename: str) -> dict:
             clf = IsolationForest(contamination=0.05, random_state=42)
             preds = clf.fit_predict(X)
             
-            # Get indices of anomalies
             anomaly_indices = [i for i, x in enumerate(preds) if x == -1]
             
-            # Return top 5 anomalies
             for idx in anomaly_indices[:5]:
+                row_data = df.iloc[idx].to_dict()
+                # Make sure all values are JSON-serializable
+                clean_data = {}
+                for k, v in row_data.items():
+                    if isinstance(v, (np.integer,)):
+                        clean_data[k] = int(v)
+                    elif isinstance(v, (np.floating,)):
+                        clean_data[k] = float(v) if not np.isnan(v) else None
+                    elif isinstance(v, (np.bool_,)):
+                        clean_data[k] = bool(v)
+                    else:
+                        clean_data[k] = str(v) if not pd.isna(v) else None
                 anomalies.append({
                     "row_index": idx,
-                    "data": df.iloc[idx].to_dict()
+                    "data": clean_data
                 })
 
         # 5. Correlation Matrix (Numeric only)
         correlations = {}
         if len(numeric_cols) > 1:
             corr_matrix = df[numeric_cols].corr()
-            # Convert to list format for frontend heatmap
             for i, row in enumerate(corr_matrix.index):
                 for j, col in enumerate(corr_matrix.columns):
-                    correlations[f"{row}::{col}"] = float(corr_matrix.iloc[i, j])
+                    val = corr_matrix.iloc[i, j]
+                    correlations[f"{row}::{col}"] = float(val) if not np.isnan(val) else 0.0
 
-        # 6. Actionable Insights (Rule-based)
+        # 6. Rule-based insights (always available)
         insights = []
         if summary["missing_values_count"] > 0:
             insights.append({
                 "type": "Data Quality",
                 "severity": "High" if summary["missing_values_count"] > len(df) * 0.1 else "Medium",
-                "message": f"Found {summary['missing_values_count']} missing values. Consider imputation or dropping rows."
+                "message": f"Found {summary['missing_values_count']} missing values across {sum(1 for c in columns_profile if c['missing'] > 0)} columns. Consider imputation or dropping rows."
             })
         if summary["duplicate_rows"] > 0:
             insights.append({
                 "type": "Data Quality",
                 "severity": "Medium",
-                "message": f"Found {summary['duplicate_rows']} duplicate rows. Deduping recommended."
+                "message": f"Found {summary['duplicate_rows']} duplicate rows ({summary['duplicate_rows']/summary['total_rows']*100:.1f}% of data). Deduplication recommended."
             })
         if len(anomalies) > 0:
             insights.append({
                 "type": "Anomaly",
                 "severity": "High",
-                "message": f"Detected {len(anomaly_indices)} potential anomalies in numeric data."
+                "message": f"Detected {len(anomaly_indices)} potential anomalies ({len(anomaly_indices)/summary['total_rows']*100:.1f}% of rows) via Isolation Forest."
             })
+
+        # 7. AI-Powered Insights (GPT-4o-mini)
+        sample_rows = []
+        try:
+            sample_df = df.head(3)
+            for _, row in sample_df.iterrows():
+                row_dict = {}
+                for k, v in row.to_dict().items():
+                    if isinstance(v, (np.integer,)):
+                        row_dict[k] = int(v)
+                    elif isinstance(v, (np.floating,)):
+                        row_dict[k] = float(v) if not np.isnan(v) else None
+                    elif isinstance(v, (np.bool_,)):
+                        row_dict[k] = bool(v)
+                    else:
+                        row_dict[k] = str(v) if not pd.isna(v) else None
+                sample_rows.append(row_dict)
+        except Exception:
+            pass
+
+        ai_result = _generate_ai_insights(summary, columns_profile, anomalies, correlations, sample_rows)
+
+        # Merge AI insights with rule-based ones
+        all_insights = insights + ai_result.get("ai_insights", [])
 
         return {
             "success": True,
@@ -109,10 +226,12 @@ def analyze_dataset(file_content: bytes, filename: str) -> dict:
             "columns": columns_profile,
             "anomalies": anomalies,
             "correlations": correlations,
-            "insights": insights
+            "insights": all_insights,
+            "ai_summary": ai_result.get("ai_summary", ""),
         }
 
     except Exception as e:
+        logger.error(f"Analysis error: {e}", exc_info=True)
         return {
             "success": False,
             "error": str(e)

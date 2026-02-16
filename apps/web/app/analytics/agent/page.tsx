@@ -61,6 +61,7 @@ interface AnalysisResult {
     severity: string;
     message: string;
   }[];
+  ai_summary?: string;
   error?: string;
 }
 
@@ -363,6 +364,18 @@ export default function AnalyticsAgentPage() {
                     </div>
                 </div>
 
+                {/* AI Executive Summary */}
+                {result.ai_summary && (
+                    <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-2xl p-6">
+                        <h3 className="text-lg font-bold text-white mb-3 flex items-center">
+                            <Zap className="mr-2 text-indigo-400" size={20} />
+                            AI Executive Summary
+                            <span className="ml-2 text-xs font-normal bg-indigo-500/30 text-indigo-300 px-2 py-0.5 rounded-full">GPT-4o</span>
+                        </h3>
+                        <p className="text-gray-300 leading-relaxed">{result.ai_summary}</p>
+                    </div>
+                )}
+
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Insights Panel */}
                     <div className="lg:col-span-1 bg-white/5 border border-white/10 rounded-2xl p-6">
@@ -378,11 +391,15 @@ export default function AnalyticsAgentPage() {
                                     <div key={idx} className={`p-4 rounded-xl border ${
                                         insight.severity === 'High' 
                                         ? 'bg-red-500/10 border-red-500/20' 
+                                        : insight.severity === 'Low'
+                                        ? 'bg-blue-500/10 border-blue-500/20'
                                         : 'bg-yellow-500/10 border-yellow-500/20'
                                     }`}>
                                         <div className="flex justify-between items-start mb-1">
                                             <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                                                insight.severity === 'High' ? 'bg-red-500 text-white' : 'bg-yellow-500 text-black'
+                                                insight.severity === 'High' ? 'bg-red-500 text-white' 
+                                                : insight.severity === 'Low' ? 'bg-blue-500 text-white'
+                                                : 'bg-yellow-500 text-black'
                                             }`}>
                                                 {insight.type}
                                             </span>
