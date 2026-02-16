@@ -36,14 +36,9 @@ for name, url in SERVICES.items():
 
 async def proxy_request(service_url: str, path: str, request: Request):
     # Intelligent Protocol Handling
-    if not service_url.startswith("http"):
-        # If it looks like a Render URL, force HTTPS
+    if not service_url.startswith(("http://", "https://")):
         if "onrender.com" in service_url:
             service_url = f"https://{service_url}"
-        # If it looks like a local Docker URL (e.g., auth-service:3001), use HTTP
-        elif ":" in service_url and "localhost" not in service_url:
-             service_url = f"http://{service_url}"
-        # Default to HTTP
         else:
             service_url = f"http://{service_url}"
         
@@ -57,10 +52,17 @@ async def proxy_request(service_url: str, path: str, request: Request):
             # Forward request
             content = await request.body()
             
-            # Filter headers - Host header can confuse the upstream service
+            # Filter headers
             headers = dict(request.headers)
             headers.pop("host", None)
-            headers.pop("content-length", None) # Let httpx handle content-length
+            
+            # Handle Content-Length and Transfer-Encoding
+            # We read the full body, so we are not sending chunked data upstream.
+            # We should remove Transfer-Encoding if present.
+            headers.pop("transfer-encoding", None)
+            
+            # Let httpx handle content-length based on the content we provide
+            headers.pop("content-length", None)
             
             response = await client.request(
                 method=request.method,
