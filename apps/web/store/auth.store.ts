@@ -31,6 +31,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const response = await api.post('/api/auth/login', credentials);
       const { user, tokens } = response.data;
       localStorage.setItem('token', tokens.accessToken);
+      localStorage.setItem('refreshToken', tokens.refreshToken);
       set({ user, token: tokens.accessToken });
     } catch (error) {
       console.error('Login failed:', error);
@@ -43,6 +44,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const response = await api.post('/api/auth/register', data);
       const { user, tokens } = response.data;
       localStorage.setItem('token', tokens.accessToken);
+      localStorage.setItem('refreshToken', tokens.refreshToken);
       set({ user, token: tokens.accessToken });
     } catch (error) {
       console.error('Registration failed:', error);
@@ -52,6 +54,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     set({ user: null, token: null });
   },
 

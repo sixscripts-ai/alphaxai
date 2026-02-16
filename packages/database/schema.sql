@@ -363,3 +363,19 @@ CREATE TABLE audit_logs (
 
 CREATE INDEX idx_audit_org_user ON audit_logs (org_id, user_id);
 CREATE INDEX idx_audit_occurred ON audit_logs (occurred_at DESC);
+
+-- =========================
+-- Migrations for existing databases
+-- =========================
+-- Add first_name/last_name to users if not present
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='first_name') THEN
+    ALTER TABLE users ADD COLUMN first_name text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='last_name') THEN
+    ALTER TABLE users ADD COLUMN last_name text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='items' AND column_name='description') THEN
+    ALTER TABLE items ADD COLUMN description text;
+  END IF;
+END $$;

@@ -58,7 +58,7 @@ export function Sidebar() {
         </AnimatePresence>
         <button 
           onClick={() => setCollapsed(!collapsed)}
-          className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+          className="p-2 hover:bg-white/5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
         >
           {collapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
         </button>
@@ -71,8 +71,9 @@ export function Sidebar() {
             <Link key={item.href} href={item.href}>
               <motion.div
                 whileHover={{ x: 4 }}
+                whileTap={{ scale: 0.98 }}
                 className={clsx(
-                  "flex items-center px-3 py-3 rounded-xl cursor-pointer transition-colors relative group",
+                  "flex items-center px-3 py-3 rounded-xl cursor-pointer transition-colors relative group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
                   isActive ? "bg-blue-600/20 text-blue-400" : "text-gray-400 hover:bg-white/5 hover:text-white"
                 )}
               >
@@ -109,7 +110,7 @@ export function Sidebar() {
 
       <div className="p-4 border-t border-white/10">
         <button className={clsx(
-          "flex items-center w-full px-3 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-colors",
+          "flex items-center w-full px-3 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500",
           collapsed ? "justify-center" : "justify-start"
         )}>
           <LogOut size={20} className={clsx(collapsed ? "" : "mr-3")} />

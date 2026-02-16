@@ -179,3 +179,53 @@ export const me = async (req: Request, res: Response) => {
 
   res.json({ user: { ...user, roles, organizationId: orgId } });
 };
+
+export const refreshToken = async (req: Request, res: Response) => {
+  try {
+    const { refreshToken: token } = req.body;
+    if (!token) {
+      return res.status(400).json({ error: 'Refresh token required' });
+    }
+
+    const decoded = verifyRefreshToken(token) as any;
+    if (!decoded) {
+      return res.status(401).json({ error: 'Invalid or expired refresh token' });
+    }
+
+    // Get user info to rebuild tokens
+    const userResult = await query('SELECT id, email, first_name, last_name FROM users WHERE id = $1', [decoded.userId]);
+    const user = userResult.rows[0];
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const memberResult = await query(
+      `SELECT om.org_id, r.name as role_name 
+       FROM org_members om
+       JOIN roles r ON om.role_id = r.id
+       WHERE om.user_id = $1
+       LIMIT 1`,
+      [user.id]
+    );
+
+    if (memberResult.rows.length === 0) {
+      return res.status(403).json({ error: 'User is not a member of any organization' });
+    }
+
+    const memberData = memberResult.rows[0];
+    const userPayload = {
+      id: user.id,
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      organizationId: memberData.org_id,
+      roles: [memberData.role_name],
+    };
+
+    const tokens = generateTokens(userPayload);
+    res.json({ user: userPayload, tokens });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};

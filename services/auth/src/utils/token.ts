@@ -30,3 +30,11 @@ export const verifyToken = (token: string) => {
     return null;
   }
 };
+
+export const verifyRefreshToken = (token: string) => {
+  try {
+    return jwt.verify(token, REFRESH_SECRET);
+  } catch (error) {
+    return null;
+  }
+};
