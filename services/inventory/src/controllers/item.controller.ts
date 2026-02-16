@@ -247,3 +247,120 @@ export const importItems = async (req: Request, res: Response) => {
     client.release();
   }
 };
+
+export const updateItem = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const orgId = (req as any).user.orgId;
+    const { name, description, unit, category, is_active, reorder_point } = req.body;
+
+    const fields: string[] = [];
+    const values: any[] = [];
+    let idx = 1;
+
+    if (name !== undefined) { fields.push(`name = $${idx++}`); values.push(name); }
+    if (description !== undefined) { fields.push(`description = $${idx++}`); values.push(description); }
+    if (unit !== undefined) { fields.push(`unit = $${idx++}`); values.push(unit); }
+    if (category !== undefined) { fields.push(`category = $${idx++}`); values.push(category); }
+    if (is_active !== undefined) { fields.push(`is_active = $${idx++}`); values.push(is_active); }
+    if (reorder_point !== undefined) { fields.push(`reorder_point = $${idx++}`); values.push(reorder_point); }
+
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    values.push(id, orgId);
+    const result = await db.query(
+      `UPDATE items SET ${fields.join(', ')} WHERE id = $${idx++} AND org_id = $${idx} RETURNING *`,
+      values
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const deleteItem = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const orgId = (req as any).user.orgId;
+
+    const result = await db.query(
+      `DELETE FROM items WHERE id = $1 AND org_id = $2 RETURNING id`,
+      [id, orgId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
+    res.json({ deleted: true, id: result.rows[0].id });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const getStats = async (req: Request, res: Response) => {
+  try {
+    const orgId = (req as any).user.orgId;
+
+    const totalItems = await db.query(
+      `SELECT COUNT(*)::int as count FROM items WHERE org_id = $1`, [orgId]
+    );
+
+    const activeItems = await db.query(
+      `SELECT COUNT(*)::int as count FROM items WHERE org_id = $1 AND is_active = true`, [orgId]
+    );
+
+    const lowStock = await db.query(
+      `SELECT COUNT(*)::int as count FROM items i
+       LEFT JOIN (
+         SELECT item_id, SUM(signed_quantity) as qty
+         FROM inventory_movements GROUP BY item_id
+       ) m ON i.id = m.item_id
+       WHERE i.org_id = $1 AND COALESCE(m.qty, 0) <= i.reorder_point AND COALESCE(m.qty, 0) > 0`,
+      [orgId]
+    );
+
+    const outOfStock = await db.query(
+      `SELECT COUNT(*)::int as count FROM items i
+       LEFT JOIN (
+         SELECT item_id, SUM(signed_quantity) as qty
+         FROM inventory_movements GROUP BY item_id
+       ) m ON i.id = m.item_id
+       WHERE i.org_id = $1 AND COALESCE(m.qty, 0) = 0`,
+      [orgId]
+    );
+
+    const totalValue = await db.query(
+      `SELECT COALESCE(SUM(COALESCE(m.qty, 0) * COALESCE(ic.unit_cost, 0)), 0)::float as value
+       FROM items i
+       LEFT JOIN (
+         SELECT item_id, SUM(signed_quantity) as qty FROM inventory_movements GROUP BY item_id
+       ) m ON i.id = m.item_id
+       LEFT JOIN LATERAL (
+         SELECT unit_cost FROM item_costs WHERE item_id = i.id AND org_id = i.org_id ORDER BY effective_date DESC LIMIT 1
+       ) ic ON true
+       WHERE i.org_id = $1`,
+      [orgId]
+    );
+
+    res.json({
+      totalItems: totalItems.rows[0].count,
+      activeItems: activeItems.rows[0].count,
+      lowStock: lowStock.rows[0].count,
+      outOfStock: outOfStock.rows[0].count,
+      totalValue: totalValue.rows[0].value,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};

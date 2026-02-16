@@ -4,6 +4,7 @@ import morgan from 'morgan';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import locationRoutes from './routes/location.routes';
+import organizationRoutes from './routes/organization.routes';
 
 dotenv.config();
 
@@ -16,6 +17,7 @@ app.use(morgan('dev'));
 app.use(express.json());
 
 app.use('/api/locations', locationRoutes);
+app.use('/api/organization', organizationRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy', service: 'organization-service' });

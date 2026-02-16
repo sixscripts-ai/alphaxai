@@ -139,6 +139,14 @@ async def auth_root_proxy(request: Request):
     return await proxy_request(SERVICES["auth"], "/api/auth", request)
 
 # Organization Routes
+@app.api_route("/api/organization/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def org_proxy(path: str, request: Request):
+    return await proxy_request(SERVICES["organization"], f"/api/organization/{path}", request)
+
+@app.api_route("/api/organization", methods=["GET", "POST"])
+async def org_root_proxy(request: Request):
+    return await proxy_request(SERVICES["organization"], "/api/organization", request)
+
 @app.api_route("/api/locations/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
 async def location_proxy(path: str, request: Request):
     return await proxy_request(SERVICES["organization"], f"/api/locations/{path}", request)

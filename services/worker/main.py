@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
-from fastapi import FastAPI, UploadFile, File, BackgroundTasks
+from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from analysis import analyze_dataset
 
@@ -143,6 +143,85 @@ async def analyze_file(file: UploadFile = File(...)):
     content = await file.read()
     result = analyze_dataset(content, file.filename)
     return result
+
+@app.get("/overview")
+async def analytics_overview():
+    """Return a high-level analytics overview of inventory data."""
+    try:
+        pool = await get_db_pool()
+        async with pool.acquire() as conn:
+            total_items = await conn.fetchval("SELECT COUNT(*) FROM items")
+            total_orgs = await conn.fetchval("SELECT COUNT(*) FROM organizations")
+            total_movements = await conn.fetchval("SELECT COUNT(*) FROM inventory_movements")
+            recent_movements = await conn.fetchval(
+                "SELECT COUNT(*) FROM inventory_movements WHERE occurred_at > NOW() - INTERVAL '7 days'"
+            )
+            
+            return {
+                "totalItems": total_items or 0,
+                "totalOrganizations": total_orgs or 0,
+                "totalMovements": total_movements or 0,
+                "recentMovements7d": recent_movements or 0,
+                "status": "ok"
+            }
+    except Exception as e:
+        logger.error(f"Overview error: {e}")
+        return {"totalItems": 0, "totalOrganizations": 0, "totalMovements": 0, "recentMovements7d": 0, "status": "error", "message": str(e)}
+
+@app.post("/insights")
+async def analytics_insights(request: Request):
+    """Generate AI-powered inventory insights using Ollama."""
+    try:
+        body = await request.json()
+        prompt = body.get("prompt", "Summarize my inventory")
+        
+        pool = await get_db_pool()
+        async with pool.acquire() as conn:
+            # Gather data context
+            items = await conn.fetch(
+                """SELECT i.name, i.sku, i.category, 
+                          COALESCE(m.qty, 0) as quantity
+                   FROM items i
+                   LEFT JOIN (
+                     SELECT item_id, SUM(signed_quantity) as qty 
+                     FROM inventory_movements GROUP BY item_id
+                   ) m ON i.id = m.item_id
+                   LIMIT 50"""
+            )
+            
+            inventory_context = "\n".join([
+                f"- {r['name']} (SKU: {r['sku']}, Category: {r['category'] or 'N/A'}, Qty: {r['quantity']})"
+                for r in items
+            ]) or "No items found."
+        
+        from analysis import _get_ollama_client
+        client = _get_ollama_client()
+        
+        if client is None:
+            return {"insight": "AI insights are not available — OLLAMA_API_KEY not configured.", "source": "fallback"}
+        
+        system_prompt = f"""You are an inventory analytics assistant. Here is the current inventory data:
+
+{inventory_context}
+
+Answer the user's question based on this data. Be concise and actionable."""
+        
+        response = client.chat(
+            model="minimax-m2.5:cloud",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        
+        return {
+            "insight": response.message.content,
+            "source": "minimax-m2.5",
+            "itemCount": len(items)
+        }
+    except Exception as e:
+        logger.error(f"Insights error: {e}")
+        return {"insight": f"Could not generate insights: {str(e)}", "source": "error"}
 
 if __name__ == "__main__":
     import uvicorn
