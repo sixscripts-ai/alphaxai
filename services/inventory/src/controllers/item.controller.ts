@@ -1,5 +1,5 @@
+import { db } from '@inventory/database';
 import { Request, Response } from 'express';
-import { query, getClient } from '@inventory/database';
 import { z } from 'zod';
 
 const createItemSchema = z.object({
@@ -12,7 +12,7 @@ const createItemSchema = z.object({
 });
 
 export const createItem = async (req: Request, res: Response) => {
-  const client = await getClient();
+  const client = await db.getClient();
   try {
     const { sku, name, unit, category, unitCost, locationId } = createItemSchema.parse(req.body);
     const orgId = (req as any).user.organizationId;
@@ -58,24 +58,71 @@ export const createItem = async (req: Request, res: Response) => {
 export const getItems = async (req: Request, res: Response) => {
   try {
     const orgId = (req as any).user.organizationId;
-    const { locationId } = req.query;
+    const { locationId, search } = req.query;
     
+    // Base query to fetch items with rich data
     let sql = `
-      SELECT i.*, COALESCE(SUM(im.signed_quantity), 0)::float as quantity_on_hand
+      WITH item_stats AS (
+        SELECT 
+            i.id, 
+            COALESCE(SUM(im.signed_quantity), 0)::float as quantity_on_hand,
+            MAX(im.occurred_at) as last_movement_at
+        FROM items i
+        LEFT JOIN inventory_movements im ON i.id = im.item_id
+        WHERE i.org_id = $1
+        ${locationId ? 'AND im.location_id = $2' : ''}
+        GROUP BY i.id
+      ),
+      item_policies AS (
+        SELECT 
+            rp.item_id, 
+            rp.min_order_qty as reorder_point,
+            rp.target_days_of_supply
+        FROM replenishment_policies rp
+        WHERE rp.org_id = $1
+        ${locationId ? 'AND rp.location_id = $2' : ''}
+      ),
+      item_costing AS (
+        SELECT 
+            ic.item_id, 
+            ic.unit_cost
+        FROM item_costs ic
+        WHERE ic.org_id = $1
+        ${locationId ? 'AND ic.location_id = $2' : ''}
+        ORDER BY ic.effective_at DESC
+        LIMIT 1 -- Ideally this should be a LATERAL JOIN or distinct on item_id, simplified for now
+      )
+      SELECT 
+        i.*, 
+        COALESCE(s.quantity_on_hand, 0) as quantity_on_hand,
+        s.last_movement_at,
+        COALESCE(rp.reorder_point, 10) as reorder_point, -- Default 10 if not set
+        COALESCE(ic.unit_cost, 0) as unit_cost,
+        CASE 
+            WHEN COALESCE(s.quantity_on_hand, 0) <= COALESCE(rp.reorder_point, 10) THEN 'LOW_STOCK'
+            WHEN COALESCE(s.quantity_on_hand, 0) = 0 THEN 'OUT_OF_STOCK'
+            ELSE 'ACTIVE'
+        END as status
       FROM items i
-      LEFT JOIN inventory_movements im ON i.id = im.item_id
+      LEFT JOIN item_stats s ON i.id = s.id
+      LEFT JOIN item_policies rp ON i.id = rp.item_id
+      LEFT JOIN item_costing ic ON i.id = ic.item_id
+      WHERE i.org_id = $1
     `;
     
     const params: any[] = [orgId];
-    
     if (locationId) {
-        sql += ` AND im.location_id = $2`;
         params.push(locationId);
     }
 
-    sql += ` WHERE i.org_id = $1 GROUP BY i.id`;
+    if (search) {
+        sql += ` AND (i.name ILIKE $${params.length + 1} OR i.sku ILIKE $${params.length + 1})`;
+        params.push(`%${search}%`);
+    }
 
-    const result = await query(sql, params);
+    sql += ` ORDER BY i.created_at DESC`;
+
+    const result = await db.query(sql, params);
     const items = result.rows;
 
     res.json(items);
@@ -90,7 +137,7 @@ export const getItem = async (req: Request, res: Response) => {
     const { id } = req.params;
     const orgId = (req as any).user.organizationId;
 
-    const result = await query(
+    const result = await db.query(
       `SELECT i.*, COALESCE(SUM(im.signed_quantity), 0)::float as quantity_on_hand
        FROM items i
        LEFT JOIN inventory_movements im ON i.id = im.item_id
