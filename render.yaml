@@ -33,8 +33,8 @@ services:
     region: oregon
     plan: free
     rootDir: .
-    # Build shared packages first, then the service
-    buildCommand: npm install && npm run build -w packages/database && npm run build -w packages/logger && npm run build -w services/auth
+    # Build shared packages first, then the service, then apply DB schema
+    buildCommand: npm install && npm run build -w packages/database && npm run build -w packages/logger && npm run build -w services/auth && cd services/auth && npm run db:migrate
     startCommand: cd services/auth && npm start
     envVars:
       - key: DATABASE_URL
