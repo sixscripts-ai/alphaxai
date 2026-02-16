@@ -44,6 +44,41 @@ app.get('/health', async (req, res) => {
   }
 });
 
+app.post('/migrate', async (req, res) => {
+  const results: string[] = [];
+  try {
+    // Add first_name/last_name to users
+    const fn = await query(`SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='first_name'`);
+    if (fn.rows.length === 0) {
+      await query(`ALTER TABLE users ADD COLUMN first_name text`);
+      results.push('Added first_name to users');
+    } else {
+      results.push('first_name already exists');
+    }
+
+    const ln = await query(`SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='last_name'`);
+    if (ln.rows.length === 0) {
+      await query(`ALTER TABLE users ADD COLUMN last_name text`);
+      results.push('Added last_name to users');
+    } else {
+      results.push('last_name already exists');
+    }
+
+    // Add description to items
+    const desc = await query(`SELECT 1 FROM information_schema.columns WHERE table_name='items' AND column_name='description'`);
+    if (desc.rows.length === 0) {
+      await query(`ALTER TABLE items ADD COLUMN description text`);
+      results.push('Added description to items');
+    } else {
+      results.push('description already exists');
+    }
+
+    res.json({ success: true, results });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message, results });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Auth Service running on port ${port}`);
 });
