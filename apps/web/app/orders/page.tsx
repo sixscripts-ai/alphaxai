@@ -26,7 +26,8 @@ import {
   DollarSign,
   RefreshCw,
   Download,
-  Truck
+  Truck,
+  Mail
 } from 'lucide-react';
 import api from '../../lib/api';
 
