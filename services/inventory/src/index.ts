@@ -4,6 +4,7 @@ import morgan from 'morgan';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import itemRoutes from './routes/item.routes';
+import analyticsRoutes from './routes/analytics.routes';
 
 dotenv.config();
 
@@ -15,6 +16,7 @@ app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
 
+app.use('/api/inventory/analytics', analyticsRoutes);
 app.use('/api/inventory', itemRoutes);
 
 app.get('/health', (req, res) => {
