@@ -20,11 +20,11 @@ export const getTeamMembers = async (req: Request, res: Response) => {
 
     let sql = `
       SELECT 
-        u.id, u.email, u.name, u.avatar_url,
-        om.role as role_name, om.created_at as joined_at,
-        (SELECT MAX(occurred_at) FROM audit_logs WHERE user_id = u.id) as last_active
+        u.id, u.email, u.first_name, u.last_name,
+        r.name as role_name, om.created_at as joined_at
       FROM users u
       JOIN org_members om ON u.id = om.user_id
+      JOIN roles r ON om.role_id = r.id
       WHERE om.org_id = $1
     `;
 
@@ -32,13 +32,13 @@ export const getTeamMembers = async (req: Request, res: Response) => {
     let paramIndex = 2;
 
     if (search) {
-      sql += ` AND (u.name ILIKE $${paramIndex} OR u.email ILIKE $${paramIndex})`;
+      sql += ` AND (u.first_name ILIKE $${paramIndex} OR u.last_name ILIKE $${paramIndex} OR u.email ILIKE $${paramIndex})`;
       params.push(`%${search}%`);
       paramIndex++;
     }
 
     if (role) {
-      sql += ` AND om.role = $${paramIndex}`;
+      sql += ` AND r.name = $${paramIndex}`;
       params.push(role);
       paramIndex++;
     }
@@ -49,13 +49,13 @@ export const getTeamMembers = async (req: Request, res: Response) => {
     
     const members = result.rows.map(m => ({
       id: m.id,
-      name: m.name,
+      name: [m.first_name, m.last_name].filter(Boolean).join(' ') || m.email,
       email: m.email,
-      avatar: m.avatar_url,
+      avatar: null,
       role: m.role_name.toUpperCase(),
-      department: 'General', // Placeholder
-      status: m.last_active ? 'ACTIVE' : 'INVITED', // Simplified logic
-      last_active: m.last_active,
+      department: 'General',
+      status: 'ACTIVE',
+      last_active: null,
       created_at: m.joined_at
     }));
 
@@ -82,9 +82,13 @@ export const inviteMember = async (req: Request, res: Response) => {
       const salt = await bcrypt.genSalt(10);
       const hash = await bcrypt.hash(tempPassword, salt);
       
+      const nameParts = name.split(' ');
+      const firstName = nameParts[0] || name;
+      const lastName = nameParts.slice(1).join(' ') || null;
+      
       const newUser = await db.query(
-        'INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING id',
-        [email, hash, name]
+        'INSERT INTO users (email, password_hash, first_name, last_name) VALUES ($1, $2, $3, $4) RETURNING id',
+        [email, hash, firstName, lastName]
       );
       userId = newUser.rows[0].id;
     } else {
