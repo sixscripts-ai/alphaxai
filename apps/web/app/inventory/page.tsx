@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Sidebar } from '../../components/ui/Sidebar';
+import { useToast } from '../../components/ui/Toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, 
@@ -40,6 +41,7 @@ interface InventoryItem {
 }
 
 export default function InventoryPage() {
+  const { toast } = useToast();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -131,7 +133,7 @@ export default function InventoryPage() {
                     window.URL.revokeObjectURL(url);
                   } catch (err) {
                     console.error('Export failed', err);
-                    alert('Export failed. Please try again.');
+                    toast('Export failed. Please try again.', 'error');
                   }
                 }}
                 className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-medium flex items-center transition-colors text-gray-300">
