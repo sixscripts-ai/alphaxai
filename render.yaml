@@ -96,6 +96,8 @@ services:
         fromDatabase:
           name: alphaxai-db
           property: connectionString
+      - key: OLLAMA_API_KEY
+        value: 1404d49cdc084ae8b0753fb36a1409ed.PjekqrQaZiJ0a3gJ9Eocy-wt
       - key: PYTHON_VERSION
         value: 3.11.0
     envVarGroups:
