@@ -32,15 +32,19 @@ SERVICES = {
 }
 
 async def proxy_request(service_url: str, path: str, request: Request):
-    # Ensure service_url has a protocol
+    # Intelligent Protocol Handling
     if not service_url.startswith("http"):
-        service_url = f"http://{service_url}"
+        if "onrender.com" in service_url:
+            service_url = f"https://{service_url}"
+        else:
+            service_url = f"http://{service_url}"
         
     url = f"{service_url}{path}"
     
     logger.info(f"Proxying {request.method} request to: {url}")
     
-    async with httpx.AsyncClient() as client:
+    # Increase timeout and follow redirects
+    async with httpx.AsyncClient(follow_redirects=True, timeout=60.0) as client:
         try:
             # Forward request
             content = await request.body()
@@ -49,15 +53,14 @@ async def proxy_request(service_url: str, path: str, request: Request):
                 url=url,
                 headers=request.headers,
                 content=content,
-                params=request.query_params,
-                timeout=30.0
+                params=request.query_params
             )
             return JSONResponse(content=response.json(), status_code=response.status_code)
         except httpx.RequestError as exc:
-            logger.error(f"Proxy error: {exc}")
+            logger.error(f"Proxy connection error: {exc}")
             return JSONResponse(content={"error": f"Service unavailable: {exc}"}, status_code=503)
         except Exception as exc:
-            logger.error(f"Unexpected error: {exc}")
+            logger.error(f"Unexpected proxy error: {exc}")
             return JSONResponse(content={"error": str(exc)}, status_code=500)
 
 @app.get("/")
