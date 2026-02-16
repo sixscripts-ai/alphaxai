@@ -6,31 +6,34 @@ from io import BytesIO
 import json
 import os
 import logging
-from google import genai
+from ollama import Client as OllamaClient
 
 logger = logging.getLogger("analysis")
 
-# Initialize Gemini client
+OLLAMA_MODEL = "minimax-m2.5:cloud"
 _client = None
 
 
-def _get_gemini_client():
+def _get_ollama_client():
     global _client
     if _client is None:
-        api_key = os.getenv("GEMINI_API_KEY")
+        api_key = os.getenv("OLLAMA_API_KEY")
         if api_key:
-            _client = genai.Client(api_key=api_key)
+            _client = OllamaClient(
+                host='https://api.ollama.com',
+                headers={'Authorization': f'Bearer {api_key}'}
+            )
         else:
-            logger.warning("GEMINI_API_KEY not set — AI insights will be unavailable")
+            logger.warning("OLLAMA_API_KEY not set — AI insights will be unavailable")
     return _client
 
 
 def _generate_ai_insights(summary: dict, columns_profile: list, anomalies: list, correlations: dict, sample_rows: list) -> dict:
-    """Call Gemini 2.5 Pro to generate real AI-powered insights from the data profile."""
-    client = _get_gemini_client()
+    """Call Ollama (minimax-m2.5:cloud) to generate real AI-powered insights from the data profile."""
+    client = _get_ollama_client()
     if not client:
         return {
-            "ai_summary": "AI insights unavailable — GEMINI_API_KEY not configured.",
+            "ai_summary": "AI insights unavailable — OLLAMA_API_KEY not configured.",
             "ai_insights": []
         }
 
@@ -61,21 +64,21 @@ def _generate_ai_insights(summary: dict, columns_profile: list, anomalies: list,
     )
 
     try:
-        response = client.models.generate_content(
-            model="gemini-2.5-pro-preview-06-05",
-            contents=f"{system_prompt}\n\nAnalyze this dataset profile and provide insights:\n\n{data_profile}",
-            config={
-                "temperature": 0.3,
-                "max_output_tokens": 1500,
-                "response_mime_type": "application/json",
-            },
+        response = client.chat(
+            model=OLLAMA_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"Analyze this dataset profile and provide insights:\n\n{data_profile}"},
+            ],
+            options={"temperature": 0.3},
+            format="json",
         )
 
-        result_text = response.text
+        result_text = response.message.content
         return json.loads(result_text)
 
     except Exception as e:
-        logger.error(f"Gemini API error: {e}")
+        logger.error(f"Ollama API error: {e}")
         return {
             "ai_summary": f"AI analysis encountered an error: {str(e)}",
             "ai_insights": []

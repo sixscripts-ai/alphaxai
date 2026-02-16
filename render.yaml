@@ -100,6 +100,7 @@ services:
         value: 3.11.0
     envVarGroups:
       - name: ENV_API
+    # ENV_API group must contain: OLLAMA_API_KEY
 
 databases:
   - name: alphaxai-db

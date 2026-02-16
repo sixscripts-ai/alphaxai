@@ -13,13 +13,15 @@ import {
   Bell, 
   Menu, 
   ChevronLeft,
-  LogOut
+  LogOut,
+  ShoppingCart
 } from 'lucide-react';
 import clsx from 'clsx';
 
 const menuItems = [
   { name: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
   { name: 'Inventory', icon: Package, href: '/inventory' },
+  { name: 'Orders', icon: ShoppingCart, href: '/orders' },
   { name: 'Analytics', icon: BarChart, href: '/analytics' },
   { name: 'Organization', icon: Users, href: '/organization' },
   { name: 'Alerts', icon: Bell, href: '/alerts' },

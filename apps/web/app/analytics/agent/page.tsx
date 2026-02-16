@@ -370,7 +370,7 @@ export default function AnalyticsAgentPage() {
                         <h3 className="text-lg font-bold text-white mb-3 flex items-center">
                             <Zap className="mr-2 text-indigo-400" size={20} />
                             AI Executive Summary
-                            <span className="ml-2 text-xs font-normal bg-indigo-500/30 text-indigo-300 px-2 py-0.5 rounded-full">Gemini</span>
+                            <span className="ml-2 text-xs font-normal bg-indigo-500/30 text-indigo-300 px-2 py-0.5 rounded-full">MiniMax M2.5</span>
                         </h3>
                         <p className="text-gray-300 leading-relaxed">{result.ai_summary}</p>
                     </div>
