@@ -48,6 +48,7 @@ SERVICES = {
     "audit": get_service_url("AUDIT_SERVICE_URL", "audit", 3006),
     "billing": get_service_url("BILLING_SERVICE_URL", "billing", 3007),
     "integration": get_service_url("INTEGRATION_SERVICE_URL", "integration", 3008),
+    "worker": get_service_url("WORKER_SERVICE_URL", "worker", 8000),
 }
 for name, url in SERVICES.items():
     logger.info(f"  {name.upper()}: {url}")
@@ -138,3 +139,8 @@ async def inventory_proxy(path: str, request: Request):
 @app.api_route("/api/inventory", methods=["GET", "POST"])
 async def inventory_root_proxy(request: Request):
     return await proxy_request(SERVICES["inventory"], "/api/inventory", request)
+
+# Analytics/Worker Routes
+@app.api_route("/api/analytics/{path:path}", methods=["GET", "POST"])
+async def analytics_proxy(path: str, request: Request):
+    return await proxy_request(SERVICES["worker"], f"/{path}", request)

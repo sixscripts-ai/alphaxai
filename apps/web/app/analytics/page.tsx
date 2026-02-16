@@ -16,7 +16,8 @@ import {
   Pie, 
   Cell 
 } from 'recharts';
-import { Calendar, Download, TrendingUp } from 'lucide-react';
+import { Calendar, Download, TrendingUp, Zap } from 'lucide-react';
+import Link from 'next/link';
 
 const salesData = [
   { name: 'Mon', sales: 4000, profit: 2400 },
@@ -65,6 +66,13 @@ export default function AnalyticsPage() {
           </div>
           
           <div className="flex space-x-3">
+            <Link 
+                href="/analytics/agent"
+                className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl shadow-lg shadow-indigo-500/20 flex items-center transition-all transform hover:scale-105"
+            >
+                <Zap size={18} className="mr-2" />
+                Launch AI Agent
+            </Link>
             <button className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors flex items-center text-gray-300">
               <Calendar size={18} className="mr-2" />
               Last 7 Days
