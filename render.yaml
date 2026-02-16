@@ -40,7 +40,8 @@ services:
     region: oregon
     plan: free
     rootDir: .
-    buildCommand: npm install && npm run build -w services/auth
+    # Build shared packages first, then the service
+    buildCommand: npm install && npm run build -w packages/database && npm run build -w packages/logger && npm run build -w services/auth
     startCommand: cd services/auth && npm start
     envVars:
       - key: DATABASE_URL
@@ -59,7 +60,7 @@ services:
     region: oregon
     plan: free
     rootDir: .
-    buildCommand: npm install && npm run build -w services/inventory
+    buildCommand: npm install && npm run build -w packages/database && npm run build -w packages/logger && npm run build -w services/inventory
     startCommand: cd services/inventory && npm start
     envVars:
       - key: DATABASE_URL
@@ -76,7 +77,7 @@ services:
     region: oregon
     plan: free
     rootDir: .
-    buildCommand: npm install && npm run build -w services/organization
+    buildCommand: npm install && npm run build -w packages/database && npm run build -w packages/logger && npm run build -w services/organization
     startCommand: cd services/organization && npm start
     envVars:
       - key: DATABASE_URL
