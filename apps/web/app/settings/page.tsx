@@ -40,21 +40,18 @@ export default function SettingsPage() {
     setDbStatus('checking');
     setServiceStatuses({ gateway: 'checking', auth: 'checking', inventory: 'checking', worker: 'checking' });
 
-    const checks = [
-      { key: 'gateway', url: '/api/auth/../health' },
-    ];
-
-    // Check gateway via a proxied health endpoint
+    // Check gateway health (direct gateway endpoint)
     try {
-      const gatewayRes = await api.get('/api/auth/../health');
-      setServiceStatuses(prev => ({ ...prev, gateway: gatewayRes.status === 200 ? 'healthy' : 'error' }));
+      const gatewayRes = await api.get('/health');
+      setServiceStatuses(prev => ({ ...prev, gateway: gatewayRes.data?.status === 'healthy' ? 'healthy' : 'error' }));
     } catch {
       setServiceStatuses(prev => ({ ...prev, gateway: 'error' }));
     }
 
-    // Check auth
+    // Check auth (auth service has /health at root, gateway proxies /api/auth/X -> auth:/api/auth/X,
+    // so we need a route that hits auth's /health)
     try {
-      const res = await api.get('/api/auth/health');
+      const res = await api.get('/api/health/auth');
       setServiceStatuses(prev => ({ ...prev, auth: res.data?.status === 'healthy' ? 'healthy' : 'error' }));
     } catch {
       setServiceStatuses(prev => ({ ...prev, auth: 'error' }));
@@ -77,7 +74,7 @@ export default function SettingsPage() {
 
     // Check worker
     try {
-      const res = await api.get('/api/analytics/health');
+      const res = await api.get('/api/health/worker');
       setServiceStatuses(prev => ({ ...prev, worker: res.data?.status === 'healthy' ? 'healthy' : 'error' }));
     } catch {
       setServiceStatuses(prev => ({ ...prev, worker: 'error' }));
