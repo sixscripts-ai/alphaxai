@@ -211,7 +211,8 @@ Answer the user's question based on this data. Be concise and actionable."""
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
-            ]
+            ],
+            options={"timeout": 45}
         )
         
         return {
