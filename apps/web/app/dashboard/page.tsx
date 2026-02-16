@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../../store/auth.store';
 import { Sidebar } from '../../components/ui/Sidebar';
 import { StatCard } from '../../components/ui/StatCard';
@@ -62,6 +63,7 @@ export default function DashboardPage() {
   const [riskItems, setRiskItems] = useState<any[]>([]);
   const [categoryData, setCategoryData] = useState<any[]>([]);
   const user = useAuthStore((state) => state.user);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -166,7 +168,7 @@ export default function DashboardPage() {
                 className="bg-white/5 border border-white/10 rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 w-64 transition-all"
               />
             </div>
-            <button className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors relative">
+            <button onClick={() => router.push('/inventory?status=LOW_STOCK')} className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors relative">
               <Bell size={20} className="text-gray-300" />
               <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0a0a0a]" />
             </button>
@@ -186,7 +188,7 @@ export default function DashboardPage() {
             color="emerald" 
             delay={0.1}
             subtext="Tied up in inventory"
-            onDrillDown={() => console.log('Drill down: Working Capital')}
+            onDrillDown={() => router.push('/inventory')}
           />
           <StatCard 
             title="Inventory Turnover" 
@@ -196,7 +198,7 @@ export default function DashboardPage() {
             color="blue" 
             delay={0.2}
             subtext="Turns per year"
-            onDrillDown={() => console.log('Drill down: Turnover')}
+            onDrillDown={() => router.push('/analytics/agent')}
           />
            <StatCard 
             title="Fill Rate" 
@@ -206,7 +208,7 @@ export default function DashboardPage() {
             color="purple" 
             delay={0.3}
             subtext="Order fulfillment accuracy"
-            onDrillDown={() => console.log('Drill down: Fill Rate')}
+            onDrillDown={() => router.push('/inventory?status=LOW_STOCK')}
           />
           <StatCard 
             title="Days Remaining" 
@@ -216,7 +218,7 @@ export default function DashboardPage() {
             color="amber" 
             delay={0.4}
             subtext="Average stock cover"
-            onDrillDown={() => console.log('Drill down: Days Remaining')}
+            onDrillDown={() => router.push('/inventory')}
           />
         </div>
 
@@ -361,7 +363,7 @@ export default function DashboardPage() {
                         <AlertTriangle size={20} className="mr-2" />
                         High Risk Items
                     </h3>
-                    <button className="text-sm text-gray-400 hover:text-white">View All Risk Report</button>
+                    <button onClick={() => router.push('/inventory?status=LOW_STOCK')} className="text-sm text-gray-400 hover:text-white">View All Risk Report</button>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
@@ -387,7 +389,7 @@ export default function DashboardPage() {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <button className="text-blue-400 hover:text-blue-300 text-xs font-medium uppercase tracking-wide">Review</button>
+                                        <button onClick={(e) => { e.stopPropagation(); router.push('/inventory'); }} className="text-blue-400 hover:text-blue-300 text-xs font-medium uppercase tracking-wide">Review</button>
                                     </td>
                                 </tr>
                             )) : (
@@ -414,7 +416,7 @@ export default function DashboardPage() {
                         <Activity size={20} className="mr-2" />
                         Audit Log
                     </h3>
-                    <button className="text-sm text-gray-400 hover:text-white">Full History</button>
+                    <button onClick={() => router.push('/inventory')} className="text-sm text-gray-400 hover:text-white">Full History</button>
                 </div>
                  <div className="p-6 space-y-6">
                     {data.itemsCount > 0 ? (

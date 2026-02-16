@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Sidebar } from '../../components/ui/Sidebar';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useToast } from '../../components/ui/Toast';
 import { 
   ShoppingCart, 
   Search, 
@@ -51,6 +52,9 @@ export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const { toast } = useToast();
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
 
   useEffect(() => {
     fetchOrders();
@@ -204,7 +208,7 @@ export default function OrdersPage() {
           </div>
           
           <div className="flex space-x-3">
-            <button className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-medium flex items-center transition-colors text-gray-300">
+            <button onClick={() => { const headers = ['Order #','Customer','Email','Status','Items','Total','Date']; const rows = orders.map(o => [o.order_number, o.customer_name, o.customer_email, o.status, o.items_count, o.total_amount, o.created_at]); const csv = [headers, ...rows].map(r => r.join(',')).join('\n'); const blob = new Blob([csv], { type: 'text/csv' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'orders_export.csv'; a.click(); URL.revokeObjectURL(url); }} className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-medium flex items-center transition-colors text-gray-300">
               <Download size={18} className="mr-2" />
               Export
             </button>
@@ -390,13 +394,13 @@ export default function OrdersPage() {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors" title="View Details">
+                            <button onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }} className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors" title="View Details">
                               <Eye size={16} />
                             </button>
-                            <button className="p-1.5 text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors" title="Edit Order">
+                            <button onClick={(e) => { e.stopPropagation(); toast('Orders service coming soon', 'info'); }} className="p-1.5 text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors" title="Edit Order">
                               <Edit size={16} />
                             </button>
-                            <button className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="Cancel Order">
+                            <button onClick={(e) => { e.stopPropagation(); toast('Orders service coming soon', 'info'); }} className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="Cancel Order">
                               <Trash2 size={16} />
                             </button>
                           </div>
@@ -413,9 +417,9 @@ export default function OrdersPage() {
           <div className="px-6 py-4 border-t border-white/10 flex items-center justify-between text-sm text-gray-500 bg-black/20">
             <span>Showing {filteredOrders.length} orders</span>
             <div className="flex space-x-2">
-              <button className="px-3 py-1 rounded-lg hover:bg-white/5 disabled:opacity-50" disabled>Previous</button>
-              <span className="px-3 py-1 text-white">Page 1</span>
-              <button className="px-3 py-1 rounded-lg hover:bg-white/5" disabled>Next</button>
+              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className="px-3 py-1 rounded-lg hover:bg-white/5 disabled:opacity-50" disabled={currentPage === 1}>Previous</button>
+              <span className="px-3 py-1 text-white">Page {currentPage}</span>
+              <button onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-1 rounded-lg hover:bg-white/5 disabled:opacity-50" disabled={filteredOrders.length <= currentPage * ITEMS_PER_PAGE}>Next</button>
             </div>
           </div>
         </motion.div>
@@ -445,6 +449,7 @@ export default function OrdersPage() {
 }
 
 function OrderDetailsModal({ order, onClose }: { order: Order, onClose: () => void }) {
+  const { toast } = useToast();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       <motion.div 
@@ -533,10 +538,10 @@ function OrderDetailsModal({ order, onClose }: { order: Order, onClose: () => vo
           </div>
 
           <div className="flex space-x-3 pt-4">
-            <button className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-white font-medium transition-colors">
+            <button onClick={() => { toast('Orders service coming soon', 'info'); }} className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-white font-medium transition-colors">
               Edit Order
             </button>
-            <button className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-white font-medium transition-colors">
+            <button onClick={() => { toast('Orders service coming soon', 'info'); }} className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-white font-medium transition-colors">
               Update Status
             </button>
           </div>

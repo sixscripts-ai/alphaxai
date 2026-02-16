@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Sidebar } from '../../components/ui/Sidebar';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useToast } from '../../components/ui/Toast';
 import { 
   Package, 
   Search, 
@@ -54,6 +55,9 @@ export default function ShipmentsPage() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
+  const { toast } = useToast();
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
 
   useEffect(() => {
     fetchShipments();
@@ -63,87 +67,23 @@ export default function ShipmentsPage() {
     setLoading(true);
     setError(null);
     try {
-      setTimeout(() => {
-        setShipments([
-          {
-            id: '1',
-            tracking_number: 'TRK-2024-001234',
-            carrier: 'FedEx',
-            status: 'IN_TRANSIT',
-            origin: 'Los Angeles, CA',
-            destination: 'New York, NY',
-            estimated_delivery: '2024-01-18',
-            weight: 25.5,
-            dimensions: '24x18x12 in',
-            cost: 45.00,
-            items_count: 12,
-            created_at: '2024-01-15T10:30:00Z'
-          },
-          {
-            id: '2',
-            tracking_number: 'TRK-2024-001235',
-            carrier: 'UPS',
-            status: 'OUT_FOR_DELIVERY',
-            origin: 'Chicago, IL',
-            destination: 'Miami, FL',
-            estimated_delivery: '2024-01-15',
-            weight: 10.0,
-            dimensions: '12x10x8 in',
-            cost: 22.50,
-            items_count: 5,
-            created_at: '2024-01-14T14:22:00Z'
-          },
-          {
-            id: '3',
-            tracking_number: 'TRK-2024-001236',
-            carrier: 'DHL',
-            status: 'DELIVERED',
-            origin: 'Seattle, WA',
-            destination: 'Austin, TX',
-            estimated_delivery: '2024-01-14',
-            actual_delivery: '2024-01-14',
-            weight: 8.5,
-            dimensions: '10x8x6 in',
-            cost: 35.00,
-            items_count: 3,
-            created_at: '2024-01-12T09:15:00Z'
-          },
-          {
-            id: '4',
-            tracking_number: 'TRK-2024-001237',
-            carrier: 'USPS',
-            status: 'PICKED_UP',
-            origin: 'Boston, MA',
-            destination: 'Denver, CO',
-            estimated_delivery: '2024-01-20',
-            weight: 15.0,
-            dimensions: '18x14x10 in',
-            cost: 18.00,
-            items_count: 8,
-            created_at: '2024-01-15T16:45:00Z'
-          },
-          {
-            id: '5',
-            tracking_number: 'TRK-2024-001238',
-            carrier: 'FedEx',
-            status: 'EXCEPTION',
-            origin: 'Phoenix, AZ',
-            destination: 'San Francisco, CA',
-            estimated_delivery: '2024-01-16',
-            weight: 5.0,
-            dimensions: '8x6x4 in',
-            cost: 55.00,
-            items_count: 2,
-            created_at: '2024-01-13T11:00:00Z'
-          }
-        ]);
-        setLoading(false);
-      }, 1000);
+      const res = await api.get('/api/shipments');
+      setShipments(res.data.map((s: any) => ({ ...s, items_count: s.items_count || 0 })));
     } catch (err) {
       console.error('Failed to fetch shipments', err);
       setError('Failed to load shipments. Please try again.');
+    } finally {
       setLoading(false);
     }
+  };
+
+  const exportCSV = () => {
+    const headers = ['Tracking #','Carrier','Status','Origin','Destination','Est. Delivery','Cost'];
+    const rows = shipments.map(s => [s.tracking_number, s.carrier, s.status, s.origin, s.destination, s.estimated_delivery, s.cost]);
+    const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'shipments_export.csv'; a.click(); URL.revokeObjectURL(url);
   };
 
   const filteredShipments = shipments.filter(shipment => {
@@ -221,7 +161,7 @@ export default function ShipmentsPage() {
           </div>
           
           <div className="flex space-x-3">
-            <button className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-medium flex items-center transition-colors text-gray-300">
+            <button onClick={exportCSV} className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-medium flex items-center transition-colors text-gray-300">
               <Download size={18} className="mr-2" />
               Export
             </button>
@@ -398,10 +338,10 @@ export default function ShipmentsPage() {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors" title="View Details">
+                            <button onClick={(e) => { e.stopPropagation(); setSelectedShipment(shipment); }} className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors" title="View Details">
                               <Eye size={16} />
                             </button>
-                            <button className="p-1.5 text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors" title="Edit">
+                            <button onClick={(e) => { e.stopPropagation(); toast('Edit shipment coming soon', 'info'); }} className="p-1.5 text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors" title="Edit">
                               <Edit size={16} />
                             </button>
                           </div>
@@ -418,9 +358,9 @@ export default function ShipmentsPage() {
           <div className="px-6 py-4 border-t border-white/10 flex items-center justify-between text-sm text-gray-500 bg-black/20">
             <span>Showing {filteredShipments.length} shipments</span>
             <div className="flex space-x-2">
-              <button className="px-3 py-1 rounded-lg hover:bg-white/5 disabled:opacity-50" disabled>Previous</button>
-              <span className="px-3 py-1 text-white">Page 1</span>
-              <button className="px-3 py-1 rounded-lg hover:bg-white/5" disabled>Next</button>
+              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className="px-3 py-1 rounded-lg hover:bg-white/5 disabled:opacity-50" disabled={currentPage === 1}>Previous</button>
+              <span className="px-3 py-1 text-white">Page {currentPage}</span>
+              <button onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-1 rounded-lg hover:bg-white/5 disabled:opacity-50" disabled={filteredShipments.length <= currentPage * ITEMS_PER_PAGE}>Next</button>
             </div>
           </div>
         </motion.div>
@@ -550,10 +490,10 @@ function ShipmentDetailsModal({ shipment, onClose }: { shipment: Shipment, onClo
         </div>
 
         <div className="flex space-x-3 mt-8 pt-6 border-t border-white/10">
-          <button className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-white font-medium transition-colors">
+          <button onClick={() => window.print()} className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-white font-medium transition-colors">
             Print Label
           </button>
-          <button className="flex-1 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-xl text-white font-medium transition-colors">
+          <button onClick={() => { const urls: Record<string, string> = { FedEx: 'https://www.fedex.com/fedextrack/?trknbr=', UPS: 'https://www.ups.com/track?tracknum=', DHL: 'https://www.dhl.com/us-en/home/tracking.html?tracking-id=', USPS: 'https://tools.usps.com/go/TrackConfirmAction?tLabels=' }; const base = urls[shipment.carrier] || 'https://www.google.com/search?q=track+'; window.open(base + shipment.tracking_number, '_blank'); }} className="flex-1 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-xl text-white font-medium transition-colors">
             Track Package
           </button>
         </div>

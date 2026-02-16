@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuthStore } from '../../store/auth.store';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, 
@@ -109,7 +110,9 @@ export function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-white/10">
-        <button className={clsx(
+        <button 
+          onClick={() => { useAuthStore.getState().logout(); window.location.href = '/login'; }}
+          className={clsx(
           "flex items-center w-full px-3 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500",
           collapsed ? "justify-center" : "justify-start"
         )}>

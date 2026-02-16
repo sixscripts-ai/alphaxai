@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Sidebar } from '../../components/ui/Sidebar';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building, MapPin, Users, Plus, Mail, Phone, MoreHorizontal, Globe, Loader2 } from 'lucide-react';
+import { Building, MapPin, Users, Plus, Mail, Phone, MoreHorizontal, Globe, Loader2, Edit, Trash2, XCircle } from 'lucide-react';
 import api from '../../lib/api';
 
 interface Location {
@@ -146,6 +146,8 @@ export default function OrganizationPage() {
 }
 
 function LocationCard({ location, index }: { location: Location, index: number }) {
+  const [showMenu, setShowMenu] = useState(false);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -154,7 +156,13 @@ function LocationCard({ location, index }: { location: Location, index: number }
       className="p-6 glass-dark rounded-3xl border border-white/10 group hover:border-orange-500/30 transition-colors relative"
     >
       <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button className="text-gray-400 hover:text-white"><MoreHorizontal size={20} /></button>
+        <button onClick={() => setShowMenu(!showMenu)} className="text-gray-400 hover:text-white"><MoreHorizontal size={20} /></button>
+        {showMenu && (
+          <div className="absolute right-0 mt-2 w-36 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-lg z-20 overflow-hidden">
+            <button onClick={() => setShowMenu(false)} className="w-full flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-white/10"><Edit size={14} className="mr-2" />Edit</button>
+            <button onClick={() => setShowMenu(false)} className="w-full flex items-center px-4 py-2 text-sm text-red-400 hover:bg-white/10"><Trash2 size={14} className="mr-2" />Delete</button>
+          </div>
+        )}
       </div>
       
       <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center mb-4 text-orange-400">
@@ -180,6 +188,8 @@ function LocationCard({ location, index }: { location: Location, index: number }
 }
 
 function UserCard({ user, index }: { user: User, index: number }) {
+  const [showMenu, setShowMenu] = useState(false);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -188,7 +198,13 @@ function UserCard({ user, index }: { user: User, index: number }) {
       className="p-6 glass-dark rounded-3xl border border-white/10 group hover:border-blue-500/30 transition-colors relative"
     >
        <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button className="text-gray-400 hover:text-white"><MoreHorizontal size={20} /></button>
+        <button onClick={() => setShowMenu(!showMenu)} className="text-gray-400 hover:text-white"><MoreHorizontal size={20} /></button>
+        {showMenu && (
+          <div className="absolute right-0 mt-2 w-36 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-lg z-20 overflow-hidden">
+            <button onClick={() => setShowMenu(false)} className="w-full flex items-center px-4 py-2 text-sm text-gray-300 hover:bg-white/10"><Edit size={14} className="mr-2" />Edit Role</button>
+            <button onClick={() => setShowMenu(false)} className="w-full flex items-center px-4 py-2 text-sm text-red-400 hover:bg-white/10"><XCircle size={14} className="mr-2" />Remove</button>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center mb-4">

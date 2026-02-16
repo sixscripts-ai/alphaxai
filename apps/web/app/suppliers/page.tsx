@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Sidebar } from '../../components/ui/Sidebar';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useToast } from '../../components/ui/Toast';
 import { 
   Truck, 
   Search, 
@@ -57,6 +58,9 @@ export default function SuppliersPage() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+  const { toast } = useToast();
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
 
   useEffect(() => {
     fetchSuppliers();
@@ -66,92 +70,41 @@ export default function SuppliersPage() {
     setLoading(true);
     setError(null);
     try {
-      // Simulated data
-      setTimeout(() => {
-        setSuppliers([
-          {
-            id: '1',
-            name: 'TechParts International',
-            contact_person: 'John Smith',
-            email: 'john@techparts.com',
-            phone: '+1 (555) 123-4567',
-            website: 'https://techparts.com',
-            address: '123 Tech Blvd, San Jose, CA 95110',
-            status: 'ACTIVE',
-            total_orders: 145,
-            total_spend: 1250000.00,
-            rating: 4.8,
-            categories: ['Electronics', 'Components'],
-            created_at: '2023-06-15T10:30:00Z'
-          },
-          {
-            id: '2',
-            name: 'Global Materials Co',
-            contact_person: 'Sarah Johnson',
-            email: 'sarah@globalmaterials.com',
-            phone: '+1 (555) 987-6543',
-            website: 'https://globalmaterials.com',
-            address: '456 Industrial Way, Chicago, IL 60601',
-            status: 'ACTIVE',
-            total_orders: 89,
-            total_spend: 850000.00,
-            rating: 4.5,
-            categories: ['Raw Materials', 'Packaging'],
-            created_at: '2023-08-20T14:22:00Z'
-          },
-          {
-            id: '3',
-            name: 'FastShip Logistics',
-            contact_person: 'Mike Wilson',
-            email: 'mike@fastship.com',
-            phone: '+1 (555) 456-7890',
-            website: 'https://fastship.com',
-            address: '789 Logistics Ave, Memphis, TN 38103',
-            status: 'ACTIVE',
-            total_orders: 234,
-            total_spend: 450000.00,
-            rating: 4.2,
-            categories: ['Shipping', 'Logistics'],
-            created_at: '2023-01-10T09:15:00Z'
-          },
-          {
-            id: '4',
-            name: 'EcoPack Solutions',
-            contact_person: 'Emily Davis',
-            email: 'emily@ecopack.com',
-            phone: '+1 (555) 321-0987',
-            website: 'https://ecopack.com',
-            address: '321 Green St, Portland, OR 97201',
-            status: 'PENDING',
-            total_orders: 12,
-            total_spend: 25000.00,
-            rating: 4.0,
-            categories: ['Packaging', 'Sustainability'],
-            created_at: '2024-01-05T16:45:00Z'
-          },
-          {
-            id: '5',
-            name: 'MetalWorks Inc',
-            contact_person: 'Robert Brown',
-            email: 'robert@metalworks.com',
-            phone: '+1 (555) 654-3210',
-            website: 'https://metalworks.com',
-            address: '555 Steel Ave, Detroit, MI 48201',
-            status: 'INACTIVE',
-            total_orders: 0,
-            total_spend: 0,
-            rating: 3.5,
-            categories: ['Metal', 'Manufacturing'],
-            created_at: '2022-11-20T11:00:00Z'
-          }
-        ]);
-        setLoading(false);
-      }, 1000);
+      const res = await api.get('/api/suppliers');
+      setSuppliers(res.data.map((s: any) => ({
+        ...s,
+        total_orders: s.total_orders || 0,
+        total_spend: s.total_spend || 0,
+        rating: s.rating || 0,
+        categories: s.categories || [],
+      })));
     } catch (err) {
       console.error('Failed to fetch suppliers', err);
       setError('Failed to load suppliers. Please try again.');
+    } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeleteSupplier = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Delete this supplier?')) return;
+    try {
+      await api.delete(`/api/suppliers/${id}`);
+      toast('Supplier deleted', 'success');
+      fetchSuppliers();
+    } catch (err) {
+      toast('Failed to delete supplier', 'error');
+    }
+  };
+
+  const exportCSV = () => {
+    const headers = ['Name','Contact','Email','Phone','Status','Categories','Created'];
+    const rows = suppliers.map(s => [s.name, s.contact_person, s.email, s.phone, s.status, s.categories.join(';'), s.created_at]);
+    const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'suppliers_export.csv'; a.click(); URL.revokeObjectURL(url);
   };
 
   const filteredSuppliers = suppliers.filter(supplier => {
@@ -218,7 +171,7 @@ export default function SuppliersPage() {
           </div>
           
           <div className="flex space-x-3">
-            <button className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-medium flex items-center transition-colors text-gray-300">
+            <button onClick={exportCSV} className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-medium flex items-center transition-colors text-gray-300">
               <Download size={18} className="mr-2" />
               Export
             </button>
@@ -421,13 +374,13 @@ export default function SuppliersPage() {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors" title="View Details">
+                            <button onClick={(e) => { e.stopPropagation(); setSelectedSupplier(supplier); }} className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors" title="View Details">
                               <Eye size={16} />
                             </button>
-                            <button className="p-1.5 text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors" title="Edit Supplier">
+                            <button onClick={(e) => { e.stopPropagation(); setSelectedSupplier(supplier); }} className="p-1.5 text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors" title="Edit Supplier">
                               <Edit size={16} />
                             </button>
-                            <button className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="Delete Supplier">
+                            <button onClick={(e) => handleDeleteSupplier(supplier.id, e)} className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="Delete Supplier">
                               <Trash2 size={16} />
                             </button>
                           </div>
@@ -444,9 +397,9 @@ export default function SuppliersPage() {
           <div className="px-6 py-4 border-t border-white/10 flex items-center justify-between text-sm text-gray-500 bg-black/20">
             <span>Showing {filteredSuppliers.length} suppliers</span>
             <div className="flex space-x-2">
-              <button className="px-3 py-1 rounded-lg hover:bg-white/5 disabled:opacity-50" disabled>Previous</button>
-              <span className="px-3 py-1 text-white">Page 1</span>
-              <button className="px-3 py-1 rounded-lg hover:bg-white/5" disabled>Next</button>
+              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className="px-3 py-1 rounded-lg hover:bg-white/5 disabled:opacity-50" disabled={currentPage === 1}>Previous</button>
+              <span className="px-3 py-1 text-white">Page {currentPage}</span>
+              <button onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-1 rounded-lg hover:bg-white/5 disabled:opacity-50" disabled={filteredSuppliers.length <= currentPage * ITEMS_PER_PAGE}>Next</button>
             </div>
           </div>
         </motion.div>
@@ -476,6 +429,7 @@ export default function SuppliersPage() {
 }
 
 function SupplierDetailsModal({ supplier, onClose }: { supplier: Supplier, onClose: () => void }) {
+  const { toast } = useToast();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       <motion.div 
@@ -583,10 +537,10 @@ function SupplierDetailsModal({ supplier, onClose }: { supplier: Supplier, onClo
           </div>
 
           <div className="flex space-x-3 pt-4">
-            <button className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-white font-medium transition-colors">
+            <button onClick={() => { toast('Edit supplier feature coming soon', 'info'); }} className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-white font-medium transition-colors">
               Edit Supplier
             </button>
-            <button className="flex-1 py-2 bg-amber-600 hover:bg-amber-500 rounded-xl text-white font-medium transition-colors">
+            <button onClick={() => { toast('Purchase orders coming soon', 'info'); }} className="flex-1 py-2 bg-amber-600 hover:bg-amber-500 rounded-xl text-white font-medium transition-colors">
               Create PO
             </button>
           </div>
@@ -612,7 +566,15 @@ function CreateSupplierModal({ onClose, onRefresh }: { onClose: () => void, onRe
     e.preventDefault();
     setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await api.post('/api/suppliers', {
+        name: formData.name,
+        contact_person: formData.contactPerson,
+        email: formData.email,
+        phone: formData.phone,
+        website: formData.website,
+        address: formData.address,
+        categories: formData.categories.split(',').map(c => c.trim()).filter(Boolean),
+      });
       onRefresh();
       onClose();
     } catch (error) {

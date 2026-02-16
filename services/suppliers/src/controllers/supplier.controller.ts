@@ -20,8 +20,8 @@ export const getSuppliers = async (req: Request, res: Response) => {
     let sql = `
       SELECT s.*, 
              COALESCE(json_agg(DISTINCT jsonb_build_object('name', sc.name)) FILTER (WHERE sc.name IS NOT NULL), '[]') as categories,
-             (SELECT COUNT(*) FROM purchase_orders WHERE supplier_id = s.id) as total_orders,
-             (SELECT COALESCE(SUM(total_amount), 0) FROM purchase_orders WHERE supplier_id = s.id) as total_spend
+             0 as total_orders,
+             0 as total_spend
       FROM suppliers s
       LEFT JOIN supplier_categories sc ON s.id = sc.supplier_id
       WHERE s.org_id = $1

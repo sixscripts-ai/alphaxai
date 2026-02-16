@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Sidebar } from '../../components/ui/Sidebar';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useToast } from '../../components/ui/Toast';
 import { 
   Users, 
   Search, 
@@ -52,6 +53,9 @@ export default function TeamPage() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
+  const { toast } = useToast();
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
 
   useEffect(() => {
     fetchMembers();
@@ -61,82 +65,35 @@ export default function TeamPage() {
     setLoading(true);
     setError(null);
     try {
-      setTimeout(() => {
-        setMembers([
-          {
-            id: '1',
-            name: 'Sarah Johnson',
-            email: 'sarah@company.com',
-            phone: '+1 (555) 123-4567',
-            role: 'OWNER',
-            status: 'ACTIVE',
-            department: 'Executive',
-            last_active: '2024-01-15T10:30:00Z',
-            created_at: '2023-01-10T08:00:00Z'
-          },
-          {
-            id: '2',
-            name: 'Michael Chen',
-            email: 'michael@company.com',
-            phone: '+1 (555) 234-5678',
-            role: 'ADMIN',
-            status: 'ACTIVE',
-            department: 'Operations',
-            last_active: '2024-01-15T09:15:00Z',
-            created_at: '2023-03-15T10:00:00Z'
-          },
-          {
-            id: '3',
-            name: 'Emily Davis',
-            email: 'emily@company.com',
-            phone: '+1 (555) 345-6789',
-            role: 'MANAGER',
-            status: 'ACTIVE',
-            department: 'Sales',
-            last_active: '2024-01-14T16:45:00Z',
-            created_at: '2023-05-20T14:30:00Z'
-          },
-          {
-            id: '4',
-            name: 'James Wilson',
-            email: 'james@company.com',
-            phone: '+1 (555) 456-7890',
-            role: 'MEMBER',
-            status: 'ACTIVE',
-            department: 'Warehouse',
-            last_active: '2024-01-15T08:00:00Z',
-            created_at: '2023-08-10T11:00:00Z'
-          },
-          {
-            id: '5',
-            name: 'Lisa Martinez',
-            email: 'lisa@company.com',
-            phone: '+1 (555) 567-8901',
-            role: 'VIEWER',
-            status: 'INVITED',
-            department: 'Finance',
-            last_active: '',
-            created_at: '2024-01-14T10:00:00Z'
-          },
-          {
-            id: '6',
-            name: 'David Brown',
-            email: 'david@company.com',
-            phone: '+1 (555) 678-9012',
-            role: 'MEMBER',
-            status: 'INACTIVE',
-            department: 'IT',
-            last_active: '2023-12-01T12:00:00Z',
-            created_at: '2023-02-28T09:00:00Z'
-          }
-        ]);
-        setLoading(false);
-      }, 1000);
+      const res = await api.get('/api/team');
+      setMembers(res.data);
     } catch (err) {
       console.error('Failed to fetch members', err);
       setError('Failed to load team members. Please try again.');
+    } finally {
       setLoading(false);
     }
+  };
+
+  const handleRemoveMember = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Remove this team member?')) return;
+    try {
+      await api.delete(`/api/team/${id}`);
+      toast('Member removed', 'success');
+      fetchMembers();
+    } catch (err) {
+      toast('Failed to remove member', 'error');
+    }
+  };
+
+  const exportCSV = () => {
+    const headers = ['Name','Email','Role','Department','Status','Last Active','Joined'];
+    const rows = members.map(m => [m.name, m.email, m.role, m.department, m.status, m.last_active, m.created_at]);
+    const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'team_export.csv'; a.click(); URL.revokeObjectURL(url);
   };
 
   const filteredMembers = members.filter(member => {
@@ -222,7 +179,7 @@ export default function TeamPage() {
           </div>
           
           <div className="flex space-x-3">
-            <button className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-medium flex items-center transition-colors text-gray-300">
+            <button onClick={exportCSV} className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-medium flex items-center transition-colors text-gray-300">
               <Download size={18} className="mr-2" />
               Export
             </button>
@@ -429,13 +386,13 @@ export default function TeamPage() {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors" title="View Details">
+                            <button onClick={(e) => { e.stopPropagation(); setSelectedMember(member); }} className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors" title="View Details">
                               <Eye size={16} />
                             </button>
-                            <button className="p-1.5 text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors" title="Edit Member">
+                            <button onClick={(e) => { e.stopPropagation(); setSelectedMember(member); }} className="p-1.5 text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors" title="Edit Member">
                               <Edit size={16} />
                             </button>
-                            <button className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="Remove Member">
+                            <button onClick={(e) => handleRemoveMember(member.id, e)} className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="Remove Member">
                               <Trash2 size={16} />
                             </button>
                           </div>
@@ -452,9 +409,9 @@ export default function TeamPage() {
           <div className="px-6 py-4 border-t border-white/10 flex items-center justify-between text-sm text-gray-500 bg-black/20">
             <span>Showing {filteredMembers.length} members</span>
             <div className="flex space-x-2">
-              <button className="px-3 py-1 rounded-lg hover:bg-white/5 disabled:opacity-50" disabled>Previous</button>
-              <span className="px-3 py-1 text-white">Page 1</span>
-              <button className="px-3 py-1 rounded-lg hover:bg-white/5" disabled>Next</button>
+              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className="px-3 py-1 rounded-lg hover:bg-white/5 disabled:opacity-50" disabled={currentPage === 1}>Previous</button>
+              <span className="px-3 py-1 text-white">Page {currentPage}</span>
+              <button onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-1 rounded-lg hover:bg-white/5 disabled:opacity-50" disabled={filteredMembers.length <= currentPage * ITEMS_PER_PAGE}>Next</button>
             </div>
           </div>
         </motion.div>
@@ -484,6 +441,7 @@ export default function TeamPage() {
 }
 
 function MemberDetailsModal({ member, onClose }: { member: TeamMember, onClose: () => void }) {
+  const { toast } = useToast();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       <motion.div 
@@ -560,10 +518,10 @@ function MemberDetailsModal({ member, onClose }: { member: TeamMember, onClose: 
           </div>
 
           <div className="flex space-x-3 pt-4">
-            <button className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-white font-medium transition-colors">
+            <button onClick={() => { toast('Edit member feature coming soon', 'info'); }} className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-white font-medium transition-colors">
               Edit Member
             </button>
-            <button className="flex-1 py-2 bg-violet-600 hover:bg-violet-500 rounded-xl text-white font-medium transition-colors">
+            <button onClick={() => { toast('Change role feature coming soon', 'info'); }} className="flex-1 py-2 bg-violet-600 hover:bg-violet-500 rounded-xl text-white font-medium transition-colors">
               Change Role
             </button>
           </div>
@@ -586,7 +544,7 @@ function InviteMemberModal({ onClose, onRefresh }: { onClose: () => void, onRefr
     e.preventDefault();
     setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await api.post('/api/team/invite', formData);
       onRefresh();
       onClose();
     } catch (error) {

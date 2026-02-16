@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Sidebar } from '../../components/ui/Sidebar';
 import { useToast } from '../../components/ui/Toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -52,6 +53,10 @@ export default function InventoryPage() {
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showAdjustModal, setShowAdjustModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
 
   useEffect(() => {
     fetchItems();
@@ -78,6 +83,9 @@ export default function InventoryPage() {
     if (statusFilter === 'ALL') return matchesSearch;
     return matchesSearch && item.status === statusFilter;
   });
+
+  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
+  const paginatedItems = filteredItems.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   // Calculate Summary Metrics
   const totalValue = items.reduce((acc, item) => acc + (item.quantity_on_hand * item.unit_cost), 0);
@@ -291,7 +299,7 @@ export default function InventoryPage() {
                         </td>
                       </tr>
                     ) : (
-                      filteredItems.map((item) => (
+                      paginatedItems.map((item) => (
                         <tr key={item.id} className="hover:bg-white/5 transition-colors group">
                           <td className="px-6 py-4">
                             <div className="flex items-center">
@@ -354,16 +362,16 @@ export default function InventoryPage() {
                           </td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors" title="Adjust Stock">
+                                <button onClick={(e) => { e.stopPropagation(); setSelectedItem(item); setShowAdjustModal(true); }} className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors" title="Adjust Stock">
                                     <RefreshCw size={16} />
                                 </button>
-                                <button className="p-1.5 text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors" title="Transfer">
+                                <button onClick={(e) => { e.stopPropagation(); toast('Transfer feature coming soon', 'info'); }} className="p-1.5 text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors" title="Transfer">
                                     <ArrowRightLeft size={16} />
                                 </button>
-                                <button className="p-1.5 text-gray-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors" title="Reorder">
+                                <button onClick={(e) => { e.stopPropagation(); toast('Reorder feature coming soon', 'info'); }} className="p-1.5 text-gray-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors" title="Reorder">
                                     <ShoppingCart size={16} />
                                 </button>
-                                <button className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="History">
+                                <button onClick={(e) => { e.stopPropagation(); toast('History feature coming soon', 'info'); }} className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="History">
                                     <History size={16} />
                                 </button>
                             </div>
@@ -377,11 +385,11 @@ export default function InventoryPage() {
               
               {/* Pagination */}
               <div className="px-6 py-4 border-t border-white/10 flex items-center justify-between text-sm text-gray-500 bg-black/20">
-                <span>Showing {filteredItems.length} items</span>
+                <span>Showing {paginatedItems.length} of {filteredItems.length} items</span>
                 <div className="flex space-x-2">
-                  <button className="px-3 py-1 rounded-lg hover:bg-white/5 disabled:opacity-50" disabled>Previous</button>
-                  <span className="px-3 py-1 text-white">Page 1</span>
-                  <button className="px-3 py-1 rounded-lg hover:bg-white/5" disabled>Next</button>
+                  <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className="px-3 py-1 rounded-lg hover:bg-white/5 disabled:opacity-50" disabled={currentPage === 1}>Previous</button>
+                  <span className="px-3 py-1 text-white">Page {currentPage} of {totalPages || 1}</span>
+                  <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} className="px-3 py-1 rounded-lg hover:bg-white/5 disabled:opacity-50" disabled={currentPage >= totalPages}>Next</button>
                 </div>
               </div>
             </>
@@ -402,6 +410,108 @@ export default function InventoryPage() {
           <ImportModal onClose={() => setShowImportModal(false)} onRefresh={fetchItems} />
         )}
       </AnimatePresence>
+
+      {/* Adjust Stock Modal */}
+      <AnimatePresence>
+        {showAdjustModal && selectedItem && (
+          <AdjustStockModal item={selectedItem} onClose={() => { setShowAdjustModal(false); setSelectedItem(null); }} onRefresh={fetchItems} />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function AdjustStockModal({ item, onClose, onRefresh }: { item: any, onClose: () => void, onRefresh: () => void }) {
+  const [type, setType] = useState<'IN' | 'OUT' | 'ADJUSTMENT'>('ADJUSTMENT');
+  const [quantity, setQuantity] = useState(0);
+  const [notes, setNotes] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (quantity === 0) {
+      toast('Quantity must not be zero', 'error');
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.post('/api/inventory/transactions', {
+        itemId: item.id,
+        type,
+        quantity: type === 'OUT' ? -Math.abs(quantity) : Math.abs(quantity),
+        notes,
+      });
+      toast(`Stock ${type === 'OUT' ? 'decreased' : 'increased'} by ${Math.abs(quantity)}`, 'success');
+      onRefresh();
+      onClose();
+    } catch (err: any) {
+      toast(err?.response?.data?.error || 'Failed to adjust stock', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl"
+      >
+        <h2 className="text-xl font-bold text-white mb-1">Adjust Stock</h2>
+        <p className="text-gray-400 text-sm mb-5">{item.name} — Current qty: {item.quantity_on_hand}</p>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Transaction Type</label>
+            <select
+              value={type}
+              onChange={e => setType(e.target.value as any)}
+              className="w-full bg-gray-800 border border-white/10 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="ADJUSTMENT">Adjustment</option>
+              <option value="IN">Stock In</option>
+              <option value="OUT">Stock Out</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Quantity</label>
+            <input
+              type="number"
+              min={1}
+              value={quantity || ''}
+              onChange={e => setQuantity(parseInt(e.target.value) || 0)}
+              placeholder="Enter quantity"
+              className="w-full bg-gray-800 border border-white/10 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Notes (optional)</label>
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              rows={2}
+              placeholder="Reason for adjustment..."
+              className="w-full bg-gray-800 border border-white/10 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            />
+          </div>
+          <div className="flex justify-end space-x-3 pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-gray-400 hover:text-white transition-colors">
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading || quantity === 0}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center shadow-lg shadow-blue-500/20"
+            >
+              {loading ? <Loader2 className="animate-spin mr-2" size={18} /> : null}
+              {loading ? 'Saving...' : 'Confirm'}
+            </button>
+          </div>
+        </form>
+      </motion.div>
     </div>
   );
 }
@@ -413,13 +523,12 @@ function AddItemModal({ onClose, onRefresh }: { onClose: () => void, onRefresh: 
     description: '',
     unitCost: 0,
     reorderPoint: 10,
-    locationId: '' // Ideally fetch locations to populate this
+    locationId: ''
   });
   const [loading, setLoading] = useState(false);
   const [locations, setLocations] = useState<any[]>([]);
 
   useEffect(() => {
-    // Fetch locations for the dropdown
     api.get('/api/locations').then(res => {
         if (res.data.length > 0) {
             setLocations(res.data);

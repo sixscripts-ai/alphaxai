@@ -161,8 +161,16 @@ export default function AnalyticsAgentPage() {
   };
 
   const downloadReport = (format: 'pdf' | 'pptx') => {
-      // In a real app, this would call an endpoint to generate the file
-      alert(`Generating ${format.toUpperCase()} report... (This is a demo feature)`);
+      if (!result) return;
+      const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `analysis-report.${format === 'pdf' ? 'json' : 'json'}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
   };
 
   return (

@@ -174,7 +174,8 @@ export default function SettingsPage() {
                     {profileData.firstName?.[0]?.toUpperCase() || 'U'}{profileData.lastName?.[0]?.toUpperCase() || ''}
                   </div>
                   <div>
-                    <button className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm hover:bg-white/10 transition-colors mb-2">Change Avatar</button>
+                    <button onClick={() => document.getElementById('avatar-input')?.click()} className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm hover:bg-white/10 transition-colors mb-2">Change Avatar</button>
+                    <input id="avatar-input" type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files?.[0]) { /* avatar upload placeholder */ } }} />
                     <p className="text-xs text-gray-500">JPG, GIF or PNG. Max size of 800K</p>
                   </div>
                 </div>
@@ -205,21 +206,21 @@ export default function SettingsPage() {
                     <h3 className="font-medium text-white">Email Notifications</h3>
                     <p className="text-sm text-gray-500">Receive emails about your account activity</p>
                   </div>
-                  <ToggleSwitch defaultChecked />
+                  <ToggleSwitch defaultChecked storageKey="notif_email" />
                 </div>
                 <div className="flex items-center justify-between py-4 border-b border-white/5">
                   <div>
                     <h3 className="font-medium text-white">Push Notifications</h3>
                     <p className="text-sm text-gray-500">Receive push notifications on your device</p>
                   </div>
-                  <ToggleSwitch defaultChecked={false} />
+                  <ToggleSwitch defaultChecked={false} storageKey="notif_push" />
                 </div>
                 <div className="flex items-center justify-between py-4 border-b border-white/5">
                   <div>
                     <h3 className="font-medium text-white">Weekly Reports</h3>
                     <p className="text-sm text-gray-500">Receive weekly summary of your inventory status</p>
                   </div>
-                  <ToggleSwitch defaultChecked />
+                  <ToggleSwitch defaultChecked storageKey="notif_weekly" />
                 </div>
               </div>
             )}
@@ -307,10 +308,71 @@ export default function SettingsPage() {
               </div>
             )}
             
-            {/* Placeholder for sections not yet built */}
-             {!['profile', 'notifications', 'database'].includes(activeSection) && (
-                <div className="text-center py-20 text-gray-500">
-                    <p>Settings for {activeSection} are coming soon.</p>
+            {/* Security Section */}
+             {activeSection === 'security' && (
+                <div className="space-y-6 max-w-2xl">
+                  <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+                    <h3 className="font-medium text-white mb-1">Password</h3>
+                    <p className="text-sm text-gray-500 mb-4">Update your password to keep your account secure</p>
+                    <button className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm hover:bg-white/10 transition-colors">Change Password</button>
+                  </div>
+                  <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+                    <h3 className="font-medium text-white mb-1">Two-Factor Authentication</h3>
+                    <p className="text-sm text-gray-500 mb-4">Add an extra layer of security to your account</p>
+                    <button className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors">Enable 2FA</button>
+                  </div>
+                  <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+                    <h3 className="font-medium text-white mb-1">Active Sessions</h3>
+                    <p className="text-sm text-gray-500">You are currently signed in on this device</p>
+                  </div>
+                </div>
+             )}
+
+             {/* Appearance Section */}
+             {activeSection === 'appearance' && (
+                <div className="space-y-6 max-w-2xl">
+                  <div className="flex items-center justify-between py-4 border-b border-white/5">
+                    <div>
+                      <h3 className="font-medium text-white">Dark Mode</h3>
+                      <p className="text-sm text-gray-500">Use dark theme across the application</p>
+                    </div>
+                    <ToggleSwitch defaultChecked storageKey="appearance_dark" />
+                  </div>
+                  <div className="flex items-center justify-between py-4 border-b border-white/5">
+                    <div>
+                      <h3 className="font-medium text-white">Compact Sidebar</h3>
+                      <p className="text-sm text-gray-500">Use a more compact navigation sidebar</p>
+                    </div>
+                    <ToggleSwitch defaultChecked={false} storageKey="appearance_compact" />
+                  </div>
+                  <div className="flex items-center justify-between py-4 border-b border-white/5">
+                    <div>
+                      <h3 className="font-medium text-white">Animations</h3>
+                      <p className="text-sm text-gray-500">Enable UI animations and transitions</p>
+                    </div>
+                    <ToggleSwitch defaultChecked storageKey="appearance_animations" />
+                  </div>
+                </div>
+             )}
+
+             {/* Integrations Section */}
+             {activeSection === 'integrations' && (
+                <div className="space-y-4 max-w-2xl">
+                  {[
+                    { name: 'Slack', desc: 'Receive inventory alerts in Slack channels', connected: false },
+                    { name: 'Shopify', desc: 'Sync orders and products automatically', connected: false },
+                    { name: 'QuickBooks', desc: 'Export financial data to QuickBooks', connected: false },
+                  ].map((integration) => (
+                    <div key={integration.name} className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl">
+                      <div>
+                        <h3 className="font-medium text-white">{integration.name}</h3>
+                        <p className="text-sm text-gray-500">{integration.desc}</p>
+                      </div>
+                      <button className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm hover:bg-white/10 transition-colors">
+                        {integration.connected ? 'Disconnect' : 'Connect'}
+                      </button>
+                    </div>
+                  ))}
                 </div>
              )}
           </motion.div>
@@ -320,12 +382,24 @@ export default function SettingsPage() {
   );
 }
 
-function ToggleSwitch({ defaultChecked }: { defaultChecked: boolean }) {
-  const [enabled, setEnabled] = useState(defaultChecked);
+function ToggleSwitch({ defaultChecked, storageKey }: { defaultChecked: boolean; storageKey?: string }) {
+  const [enabled, setEnabled] = useState(() => {
+    if (storageKey && typeof window !== 'undefined') {
+      const saved = localStorage.getItem(storageKey);
+      if (saved !== null) return saved === 'true';
+    }
+    return defaultChecked;
+  });
+
+  const toggle = () => {
+    const next = !enabled;
+    setEnabled(next);
+    if (storageKey) localStorage.setItem(storageKey, String(next));
+  };
 
   return (
     <button
-      onClick={() => setEnabled(!enabled)}
+      onClick={toggle}
       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enabled ? 'bg-blue-600' : 'bg-gray-700'}`}
     >
       <span
