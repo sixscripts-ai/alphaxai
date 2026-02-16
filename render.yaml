@@ -96,10 +96,10 @@ services:
         fromDatabase:
           name: alphaxai-db
           property: connectionString
-      - key: GEMINI_API_KEY
-        value: AIzaSyCefpO-NUEQHiUaLBKuiiOftkRCCIevWIE
       - key: PYTHON_VERSION
         value: 3.11.0
+    envVarGroups:
+      - name: ENV_API
 
 databases:
   - name: alphaxai-db
