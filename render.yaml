@@ -100,9 +100,6 @@ services:
         value: a0ab9e13b25f434faa0c67d79a0ef08d.zeYmXn9Mq8tQkU0SWwU24T0q
       - key: PYTHON_VERSION
         value: 3.11.0
-    envVarGroups:
-      - name: ENV_API
-    # ENV_API group must contain: OLLAMA_API_KEY
 
 databases:
   - name: alphaxai-db
