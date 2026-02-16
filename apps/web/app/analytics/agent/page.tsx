@@ -160,17 +160,155 @@ export default function AnalyticsAgentPage() {
     }
   };
 
-  const downloadReport = (format: 'pdf' | 'pptx') => {
+  const downloadReport = async (format: 'pdf' | 'pptx') => {
       if (!result) return;
-      const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `analysis-report.${format === 'pdf' ? 'json' : 'json'}`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+
+      if (format === 'pdf') {
+        const { default: jsPDF } = await import('jspdf');
+        const { default: autoTable } = await import('jspdf-autotable');
+        const doc = new jsPDF();
+        const now = new Date().toLocaleString();
+
+        // Title
+        doc.setFontSize(20);
+        doc.setTextColor(40, 40, 40);
+        doc.text('Data Analysis Report', 14, 22);
+        doc.setFontSize(10);
+        doc.setTextColor(120, 120, 120);
+        doc.text(`Generated ${now}  •  ${file?.name ?? 'Dataset'}`, 14, 30);
+        doc.line(14, 33, 196, 33);
+
+        // Summary cards
+        doc.setFontSize(14);
+        doc.setTextColor(40, 40, 40);
+        doc.text('Executive Summary', 14, 42);
+        doc.setFontSize(10);
+        doc.setTextColor(60, 60, 60);
+        const qualityScore = Math.max(0, 100 - (result.summary.missing_values_count / result.summary.total_rows * 100) - (result.summary.duplicate_rows / result.summary.total_rows * 100)).toFixed(0);
+        const summaryLines = [
+          `Total Rows: ${result.summary.total_rows.toLocaleString()}`,
+          `Total Columns: ${result.summary.total_columns}`,
+          `Memory Usage: ${result.summary.memory_usage_mb.toFixed(2)} MB`,
+          `Missing Values: ${result.summary.missing_values_count}`,
+          `Duplicate Rows: ${result.summary.duplicate_rows}`,
+          `Data Quality Score: ${qualityScore}/100`,
+        ];
+        summaryLines.forEach((line, i) => doc.text(line, 14, 50 + i * 6));
+
+        // AI Summary
+        let yPos = 90;
+        if (result.ai_summary) {
+          doc.setFontSize(14);
+          doc.setTextColor(40, 40, 40);
+          doc.text('AI Summary', 14, yPos);
+          doc.setFontSize(9);
+          doc.setTextColor(60, 60, 60);
+          const lines = doc.splitTextToSize(result.ai_summary, 180);
+          doc.text(lines, 14, yPos + 8);
+          yPos += 8 + lines.length * 4.5 + 10;
+        }
+
+        // Insights
+        if (result.insights.length > 0) {
+          if (yPos > 240) { doc.addPage(); yPos = 20; }
+          doc.setFontSize(14);
+          doc.setTextColor(40, 40, 40);
+          doc.text('Key Insights', 14, yPos);
+          yPos += 8;
+          doc.setFontSize(9);
+          result.insights.forEach((ins) => {
+            if (yPos > 270) { doc.addPage(); yPos = 20; }
+            doc.setTextColor(ins.severity === 'High' ? 200 : ins.severity === 'Low' ? 60 : 180, ins.severity === 'High' ? 60 : ins.severity === 'Low' ? 60 : 140, 60);
+            doc.text(`[${ins.severity}] ${ins.type}: ${ins.message}`, 14, yPos);
+            yPos += 6;
+          });
+          yPos += 6;
+        }
+
+        // Column profiling table
+        if (yPos > 200) { doc.addPage(); yPos = 20; }
+        doc.setFontSize(14);
+        doc.setTextColor(40, 40, 40);
+        doc.text('Column Profiling', 14, yPos);
+        autoTable(doc, {
+          startY: yPos + 4,
+          head: [['Column', 'Type', 'Missing', 'Unique', 'Min', 'Max', 'Mean']],
+          body: result.columns.map(c => [
+            c.name, c.type, String(c.missing), String(c.unique),
+            c.min !== undefined ? c.min.toFixed(2) : '-',
+            c.max !== undefined ? c.max.toFixed(2) : '-',
+            c.mean !== undefined ? c.mean.toFixed(2) : '-',
+          ]),
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [99, 102, 241] },
+        });
+
+        doc.save('analysis-report.pdf');
+      } else {
+        const pptxgenjs = await import('pptxgenjs');
+        const PptxGenJS = pptxgenjs.default;
+        const pptx = new PptxGenJS();
+        pptx.layout = 'LAYOUT_WIDE';
+
+        const qualityScore = Math.max(0, 100 - (result.summary.missing_values_count / result.summary.total_rows * 100) - (result.summary.duplicate_rows / result.summary.total_rows * 100)).toFixed(0);
+
+        // Slide 1 — Title
+        const slide1 = pptx.addSlide();
+        slide1.addText('Data Analysis Report', { x: 0.5, y: 1.5, w: 12, fontSize: 36, color: '1F2937', bold: true });
+        slide1.addText(`${file?.name ?? 'Dataset'}  •  ${new Date().toLocaleString()}`, { x: 0.5, y: 2.5, w: 12, fontSize: 14, color: '6B7280' });
+
+        // Slide 2 — Executive Summary
+        const slide2 = pptx.addSlide();
+        slide2.addText('Executive Summary', { x: 0.5, y: 0.3, w: 12, fontSize: 24, color: '1F2937', bold: true });
+        const cards = [
+          { label: 'Rows', value: result.summary.total_rows.toLocaleString() },
+          { label: 'Columns', value: String(result.summary.total_columns) },
+          { label: 'Quality Score', value: `${qualityScore}/100` },
+          { label: 'Anomalies', value: String(result.anomalies.length) },
+        ];
+        cards.forEach((c, i) => {
+          slide2.addShape(pptx.ShapeType.roundRect as any, { x: 0.5 + i * 3.1, y: 1.2, w: 2.8, h: 1.5, fill: { color: 'EEF2FF' }, rectRadius: 0.15 } as any);
+          slide2.addText(c.value, { x: 0.5 + i * 3.1, y: 1.3, w: 2.8, fontSize: 28, bold: true, color: '4338CA', align: 'center' });
+          slide2.addText(c.label, { x: 0.5 + i * 3.1, y: 2.1, w: 2.8, fontSize: 12, color: '6B7280', align: 'center' });
+        });
+        if (result.ai_summary) {
+          slide2.addText(result.ai_summary.slice(0, 500), { x: 0.5, y: 3.2, w: 12, h: 2.5, fontSize: 11, color: '374151', valign: 'top', wrap: true });
+        }
+
+        // Slide 3 — Insights
+        if (result.insights.length > 0) {
+          const slide3 = pptx.addSlide();
+          slide3.addText('Key Insights', { x: 0.5, y: 0.3, w: 12, fontSize: 24, color: '1F2937', bold: true });
+          result.insights.slice(0, 8).forEach((ins, i) => {
+            const color = ins.severity === 'High' ? 'DC2626' : ins.severity === 'Low' ? '2563EB' : 'D97706';
+            slide3.addText(`[${ins.severity}] ${ins.type}`, { x: 0.5, y: 1.1 + i * 0.7, w: 3, fontSize: 11, bold: true, color });
+            slide3.addText(ins.message, { x: 3.6, y: 1.1 + i * 0.7, w: 9, fontSize: 10, color: '374151' });
+          });
+        }
+
+        // Slide 4 — Column Profiling
+        const slide4 = pptx.addSlide();
+        slide4.addText('Column Profiling', { x: 0.5, y: 0.3, w: 12, fontSize: 24, color: '1F2937', bold: true });
+        const tableRows: any[][] = [
+          [{ text: 'Column', options: { bold: true, fill: { color: '4338CA' }, color: 'FFFFFF', fontSize: 10 } },
+           { text: 'Type', options: { bold: true, fill: { color: '4338CA' }, color: 'FFFFFF', fontSize: 10 } },
+           { text: 'Missing', options: { bold: true, fill: { color: '4338CA' }, color: 'FFFFFF', fontSize: 10 } },
+           { text: 'Unique', options: { bold: true, fill: { color: '4338CA' }, color: 'FFFFFF', fontSize: 10 } },
+           { text: 'Mean', options: { bold: true, fill: { color: '4338CA' }, color: 'FFFFFF', fontSize: 10 } }],
+        ];
+        result.columns.slice(0, 15).forEach(c => {
+          tableRows.push([
+            { text: c.name, options: { fontSize: 9 } },
+            { text: c.type, options: { fontSize: 9 } },
+            { text: String(c.missing), options: { fontSize: 9 } },
+            { text: String(c.unique), options: { fontSize: 9 } },
+            { text: c.mean !== undefined ? c.mean.toFixed(2) : '-', options: { fontSize: 9 } },
+          ]);
+        });
+        slide4.addTable(tableRows, { x: 0.5, y: 1.0, w: 12, colW: [3, 2.5, 2, 2, 2.5], border: { pt: 0.5, color: 'D1D5DB' } } as any);
+
+        pptx.writeFile({ fileName: 'analysis-report.pptx' });
+      }
   };
 
   return (

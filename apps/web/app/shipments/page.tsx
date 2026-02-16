@@ -366,6 +366,16 @@ export default function ShipmentsPage() {
         </motion.div>
       </main>
 
+      {/* Create Shipment Modal */}
+      <AnimatePresence>
+        {showCreateModal && (
+          <CreateShipmentModal
+            onClose={() => setShowCreateModal(false)}
+            onCreated={() => { setShowCreateModal(false); fetchShipments(); }}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Shipment Details Modal */}
       <AnimatePresence>
         {selectedShipment && (
@@ -410,91 +420,175 @@ function ShipmentDetailsModal({ shipment, onClose }: { shipment: Shipment, onClo
         {/* Status Timeline */}
         <div className="mb-8">
           <div className="flex justify-between items-center relative">
-            {/* Progress Line */}
             <div className="absolute top-1/2 left-0 w-full h-1 bg-white/10 -translate-y-1/2 z-0" />
             <div 
               className="absolute top-1/2 left-0 h-1 bg-cyan-500 -translate-y-1/2 z-0 transition-all duration-500"
               style={{ width: `${(currentStep / 3) * 100}%` }}
             />
-            
             {['Picked Up', 'In Transit', 'Out for Delivery', 'Delivered'].map((step, idx) => (
               <div key={step} className="relative z-10 flex flex-col items-center">
-                <div 
-                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-                    idx <= currentStep ? 'bg-cyan-500 text-white' : 'bg-white/10 text-gray-500'
-                  }`}
-                >
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${idx <= currentStep ? 'bg-cyan-500 text-white' : 'bg-white/10 text-gray-500'}`}>
                   {idx < currentStep ? <Check size={16} /> : <Circle size={8} className={idx === currentStep ? 'fill-cyan-500' : ''} />}
                 </div>
-                <span className={`text-xs mt-2 ${idx <= currentStep ? 'text-white' : 'text-gray-500'}`}>
-                  {step}
-                </span>
+                <span className={`text-xs mt-2 ${idx <= currentStep ? 'text-white' : 'text-gray-500'}`}>{step}</span>
               </div>
             ))}
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-6">
-          {/* Info Grid */}
           <div className="space-y-4">
             <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-              <div className="flex items-center mb-2">
-                <Truck className="text-cyan-400 mr-2" size={16} />
-                <span className="text-xs text-gray-400">Carrier</span>
-              </div>
+              <div className="flex items-center mb-2"><Truck className="text-cyan-400 mr-2" size={16} /><span className="text-xs text-gray-400">Carrier</span></div>
               <p className="text-white font-medium">{shipment.carrier}</p>
             </div>
-
             <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-              <div className="flex items-center mb-2">
-                <Box className="text-purple-400 mr-2" size={16} />
-                <span className="text-xs text-gray-400">Items</span>
-              </div>
+              <div className="flex items-center mb-2"><Box className="text-purple-400 mr-2" size={16} /><span className="text-xs text-gray-400">Items</span></div>
               <p className="text-white font-medium">{shipment.items_count} items</p>
             </div>
-
             <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-              <div className="flex items-center mb-2">
-                <DollarSign className="text-emerald-400 mr-2" size={16} />
-                <span className="text-xs text-gray-400">Shipping Cost</span>
-              </div>
+              <div className="flex items-center mb-2"><DollarSign className="text-emerald-400 mr-2" size={16} /><span className="text-xs text-gray-400">Shipping Cost</span></div>
               <p className="text-white font-medium">${shipment.cost.toFixed(2)}</p>
             </div>
           </div>
-
           <div className="space-y-4">
             <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-              <div className="flex items-center mb-2">
-                <MapPin className="text-blue-400 mr-2" size={16} />
-                <span className="text-xs text-gray-400">Origin</span>
-              </div>
+              <div className="flex items-center mb-2"><MapPin className="text-blue-400 mr-2" size={16} /><span className="text-xs text-gray-400">Origin</span></div>
               <p className="text-white font-medium">{shipment.origin}</p>
             </div>
-
             <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-              <div className="flex items-center mb-2">
-                <MapPin className="text-amber-400 mr-2" size={16} />
-                <span className="text-xs text-gray-400">Destination</span>
-              </div>
+              <div className="flex items-center mb-2"><MapPin className="text-amber-400 mr-2" size={16} /><span className="text-xs text-gray-400">Destination</span></div>
               <p className="text-white font-medium">{shipment.destination}</p>
             </div>
-
             <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-              <div className="flex items-center mb-2">
-                <Calendar className="text-purple-400 mr-2" size={16} />
-                <span className="text-xs text-gray-400">Est. Delivery</span>
-              </div>
+              <div className="flex items-center mb-2"><Calendar className="text-purple-400 mr-2" size={16} /><span className="text-xs text-gray-400">Est. Delivery</span></div>
               <p className="text-white font-medium">{new Date(shipment.estimated_delivery).toLocaleDateString()}</p>
             </div>
           </div>
         </div>
 
         <div className="flex space-x-3 mt-8 pt-6 border-t border-white/10">
-          <button onClick={() => window.print()} className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-white font-medium transition-colors">
-            Print Label
-          </button>
-          <button onClick={() => { const urls: Record<string, string> = { FedEx: 'https://www.fedex.com/fedextrack/?trknbr=', UPS: 'https://www.ups.com/track?tracknum=', DHL: 'https://www.dhl.com/us-en/home/tracking.html?tracking-id=', USPS: 'https://tools.usps.com/go/TrackConfirmAction?tLabels=' }; const base = urls[shipment.carrier] || 'https://www.google.com/search?q=track+'; window.open(base + shipment.tracking_number, '_blank'); }} className="flex-1 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-xl text-white font-medium transition-colors">
-            Track Package
+          <button onClick={() => window.print()} className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-white font-medium transition-colors">Print Label</button>
+          <button onClick={() => { const urls: Record<string, string> = { FedEx: 'https://www.fedex.com/fedextrack/?trknbr=', UPS: 'https://www.ups.com/track?tracknum=', DHL: 'https://www.dhl.com/us-en/home/tracking.html?tracking-id=', USPS: 'https://tools.usps.com/go/TrackConfirmAction?tLabels=' }; const base = urls[shipment.carrier] || 'https://www.google.com/search?q=track+'; window.open(base + shipment.tracking_number, '_blank'); }} className="flex-1 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-xl text-white font-medium transition-colors">Track Package</button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function CreateShipmentModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
+  const [form, setForm] = useState({
+    tracking_number: '',
+    carrier: '',
+    origin: '',
+    destination: '',
+    estimated_delivery: '',
+    weight: '',
+    dimensions: '',
+    cost: '',
+  });
+
+  const set = (k: string, v: string) => setForm(prev => ({ ...prev, [k]: v }));
+
+  const handleSubmit = async () => {
+    if (!form.carrier || !form.origin || !form.destination || !form.estimated_delivery) {
+      toast('Carrier, origin, destination, and estimated delivery are required', 'error');
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.post('/api/shipments', {
+        tracking_number: form.tracking_number || undefined,
+        carrier: form.carrier,
+        origin: form.origin,
+        destination: form.destination,
+        estimated_delivery: form.estimated_delivery,
+        weight: form.weight ? parseFloat(form.weight) : undefined,
+        dimensions: form.dimensions || undefined,
+        cost: form.cost ? parseFloat(form.cost) : undefined,
+      });
+      toast('Shipment created successfully', 'success');
+      onCreated();
+    } catch (err: any) {
+      toast(err.response?.data?.error || 'Failed to create shipment', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inputCls = 'w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 text-sm';
+  const labelCls = 'block text-xs text-gray-400 mb-1';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-black/80 backdrop-blur-md"
+        onClick={onClose}
+      />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className="relative bg-[#0f0f0f] border border-white/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl"
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-white">New Shipment</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors"><XCircle size={22} /></button>
+        </div>
+
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>Carrier *</label>
+              <input className={inputCls} placeholder="e.g. FedEx" value={form.carrier} onChange={e => set('carrier', e.target.value)} />
+            </div>
+            <div>
+              <label className={labelCls}>Tracking Number</label>
+              <input className={inputCls} placeholder="Optional" value={form.tracking_number} onChange={e => set('tracking_number', e.target.value)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>Origin *</label>
+              <input className={inputCls} placeholder="City, State" value={form.origin} onChange={e => set('origin', e.target.value)} />
+            </div>
+            <div>
+              <label className={labelCls}>Destination *</label>
+              <input className={inputCls} placeholder="City, State" value={form.destination} onChange={e => set('destination', e.target.value)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>Est. Delivery *</label>
+              <input type="date" className={inputCls} value={form.estimated_delivery} onChange={e => set('estimated_delivery', e.target.value)} />
+            </div>
+            <div>
+              <label className={labelCls}>Cost ($)</label>
+              <input type="number" step="0.01" className={inputCls} placeholder="0.00" value={form.cost} onChange={e => set('cost', e.target.value)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>Weight (lbs)</label>
+              <input type="number" step="0.1" className={inputCls} placeholder="0.0" value={form.weight} onChange={e => set('weight', e.target.value)} />
+            </div>
+            <div>
+              <label className={labelCls}>Dimensions</label>
+              <input className={inputCls} placeholder='e.g. 12x8x6 in' value={form.dimensions} onChange={e => set('dimensions', e.target.value)} />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex space-x-3 mt-6 pt-4 border-t border-white/10">
+          <button onClick={onClose} className="flex-1 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-gray-300 font-medium transition-colors">Cancel</button>
+          <button onClick={handleSubmit} disabled={saving} className="flex-1 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 rounded-xl text-white font-medium transition-colors flex items-center justify-center">
+            {saving ? <Loader2 className="animate-spin mr-2" size={16} /> : <Plus size={16} className="mr-2" />}
+            {saving ? 'Creating...' : 'Create Shipment'}
           </button>
         </div>
       </motion.div>
