@@ -75,6 +75,10 @@ async def proxy_request(service_url: str, path: str, request: Request):
             headers = dict(request.headers)
             headers.pop("host", None)
             
+            # Remove accept-encoding to prevent upstream from sending compressed
+            # responses that the gateway can't decode when parsing JSON
+            headers.pop("accept-encoding", None)
+            
             # Handle Content-Length and Transfer-Encoding
             # We read the full body, so we are not sending chunked data upstream.
             # We should remove Transfer-Encoding if present.
