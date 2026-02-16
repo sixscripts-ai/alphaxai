@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { db } from '@inventory/database';
 import { z } from 'zod';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
 
