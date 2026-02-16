@@ -50,12 +50,18 @@ export const register = async (req: Request, res: Response) => {
     );
     const user = newUserResult.rows[0];
 
-    // 3. Create 'OWNER' Role for this Org
+    // 3. Create standard roles for this Org
     const roleResult = await client.query(
       `INSERT INTO roles (org_id, name) VALUES ($1, 'OWNER') RETURNING id`,
       [orgId]
     );
     const roleId = roleResult.rows[0].id;
+
+    // Create additional standard roles
+    await client.query(
+      `INSERT INTO roles (org_id, name) VALUES ($1, 'ADMIN'), ($1, 'MANAGER'), ($1, 'MEMBER'), ($1, 'VIEWER')`,
+      [orgId]
+    );
 
     // 4. Link User to Org via Role
     await client.query(

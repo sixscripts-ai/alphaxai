@@ -19,7 +19,7 @@ const createShipmentSchema = z.object({
 
 export const getShipments = async (req: Request, res: Response) => {
   try {
-    const orgId = (req as any).user.organizationId;
+    const orgId = (req as any).user.orgId;
     const { search, status } = req.query;
 
     let sql = `
@@ -51,7 +51,7 @@ export const getShipments = async (req: Request, res: Response) => {
 export const getShipment = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const orgId = (req as any).user.organizationId;
+    const orgId = (req as any).user.orgId;
 
     const result = await db.query(
       'SELECT * FROM shipments WHERE id = $1 AND org_id = $2',
@@ -74,7 +74,7 @@ export const createShipment = async (req: Request, res: Response) => {
   const client = await db.getClient();
   try {
     const { tracking_number, carrier, origin, destination, estimated_delivery, weight, dimensions, cost, items } = createShipmentSchema.parse(req.body);
-    const orgId = (req as any).user.organizationId;
+    const orgId = (req as any).user.orgId;
 
     await client.query('BEGIN');
 
@@ -116,7 +116,7 @@ export const updateShipmentStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { status, actual_delivery } = req.body;
-    const orgId = (req as any).user.organizationId;
+    const orgId = (req as any).user.orgId;
 
     await db.query(
       'UPDATE shipments SET status = $1, actual_delivery = $2 WHERE id = $3 AND org_id = $4',

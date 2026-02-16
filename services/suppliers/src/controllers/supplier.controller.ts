@@ -4,17 +4,14 @@ import { z } from 'zod';
 
 const createSupplierSchema = z.object({
   name: z.string().min(1),
-  contact_person: z.string().optional(),
   email: z.string().email().optional().or(z.literal('')),
   phone: z.string().optional(),
-  website: z.string().url().optional().or(z.literal('')),
-  address: z.string().optional(),
   categories: z.array(z.string()).optional(),
 });
 
 export const getSuppliers = async (req: Request, res: Response) => {
   try {
-    const orgId = (req as any).user.organizationId;
+    const orgId = (req as any).user.orgId;
     const { search, status } = req.query;
 
     let sql = `
@@ -31,7 +28,7 @@ export const getSuppliers = async (req: Request, res: Response) => {
     let paramIndex = 2;
 
     if (search) {
-      sql += ` AND (s.name ILIKE $${paramIndex} OR s.contact_person ILIKE $${paramIndex})`;
+      sql += ` AND (s.name ILIKE $${paramIndex} OR s.email ILIKE $${paramIndex})`;
       params.push(`%${search}%`);
       paramIndex++;
     }
@@ -42,7 +39,7 @@ export const getSuppliers = async (req: Request, res: Response) => {
     const suppliers = result.rows.map(s => ({
       ...s,
       categories: s.categories ? s.categories.map((c: any) => c.name) : [],
-      status: s.is_active ? 'ACTIVE' : 'INACTIVE'
+      status: 'ACTIVE'
     }));
 
     res.json(suppliers);
@@ -55,7 +52,7 @@ export const getSuppliers = async (req: Request, res: Response) => {
 export const getSupplier = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const orgId = (req as any).user.organizationId;
+    const orgId = (req as any).user.orgId;
 
     const result = await db.query(
       `SELECT s.*, 
@@ -75,7 +72,7 @@ export const getSupplier = async (req: Request, res: Response) => {
     res.json({
       ...supplier,
       categories: supplier.categories ? supplier.categories.map((c: any) => c.name) : [],
-      status: supplier.is_active ? 'ACTIVE' : 'INACTIVE'
+      status: 'ACTIVE'
     });
   } catch (error) {
     console.error(error);
@@ -86,16 +83,16 @@ export const getSupplier = async (req: Request, res: Response) => {
 export const createSupplier = async (req: Request, res: Response) => {
   const client = await db.getClient();
   try {
-    const { name, contact_person, email, phone, website, address, categories } = createSupplierSchema.parse(req.body);
-    const orgId = (req as any).user.organizationId;
+    const { name, email, phone, categories } = createSupplierSchema.parse(req.body);
+    const orgId = (req as any).user.orgId;
 
     await client.query('BEGIN');
 
     const supplierResult = await client.query(
-      `INSERT INTO suppliers (org_id, name, contact_person, email, phone, website, address)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO suppliers (org_id, name, email, phone)
+       VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [orgId, name, contact_person || null, email || null, phone || null, website || null, address || null]
+      [orgId, name, email || null, phone || null]
     );
     const supplier = supplierResult.rows[0];
 
@@ -126,15 +123,15 @@ export const updateSupplier = async (req: Request, res: Response) => {
   const client = await db.getClient();
   try {
     const { id } = req.params;
-    const orgId = (req as any).user.organizationId;
-    const { name, contact_person, email, phone, website, address, categories, status } = req.body;
+    const orgId = (req as any).user.orgId;
+    const { name, email, phone, categories, status } = req.body;
 
     await client.query('BEGIN');
 
     await client.query(
-      `UPDATE suppliers SET name = $1, contact_person = $2, email = $3, phone = $4, website = $5, address = $6, is_active = $7
-       WHERE id = $8 AND org_id = $9`,
-      [name, contact_person, email, phone, website, address, status === 'ACTIVE', id, orgId]
+      `UPDATE suppliers SET name = $1, email = $2, phone = $3
+       WHERE id = $4 AND org_id = $5`,
+      [name, email, phone, id, orgId]
     );
 
     if (categories) {
@@ -161,7 +158,7 @@ export const updateSupplier = async (req: Request, res: Response) => {
 export const deleteSupplier = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const orgId = (req as any).user.organizationId;
+    const orgId = (req as any).user.orgId;
 
     await db.query('DELETE FROM suppliers WHERE id = $1 AND org_id = $2', [id, orgId]);
     res.json({ message: 'Supplier deleted successfully' });

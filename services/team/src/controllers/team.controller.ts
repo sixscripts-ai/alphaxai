@@ -15,7 +15,7 @@ const inviteMemberSchema = z.object({
 
 export const getTeamMembers = async (req: Request, res: Response) => {
   try {
-    const orgId = (req as any).user.organizationId;
+    const orgId = (req as any).user.orgId;
     const { search, role, status } = req.query;
 
     let sql = `
@@ -69,7 +69,7 @@ export const getTeamMembers = async (req: Request, res: Response) => {
 export const inviteMember = async (req: Request, res: Response) => {
   try {
     const { email, name, role, department } = inviteMemberSchema.parse(req.body);
-    const orgId = (req as any).user.organizationId;
+    const orgId = (req as any).user.orgId;
     const inviterId = (req as any).user.id;
 
     // Check if user exists
@@ -137,7 +137,7 @@ export const updateMemberRole = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { role } = req.body;
-    const orgId = (req as any).user.organizationId;
+    const orgId = (req as any).user.orgId;
 
     const roleResult = await db.query(
       'SELECT id FROM roles WHERE org_id = $1 AND name = $2',
@@ -163,7 +163,7 @@ export const updateMemberRole = async (req: Request, res: Response) => {
 export const removeMember = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const orgId = (req as any).user.organizationId;
+    const orgId = (req as any).user.orgId;
 
     await db.query(
       'DELETE FROM org_members WHERE user_id = $1 AND org_id = $2',
