@@ -21,11 +21,8 @@ import {
   AlertTriangle,
   ChevronDown,
   X,
-  User,
-  MapPin,
   Phone,
   Mail,
-  Globe,
   DollarSign,
   RefreshCw,
   Download,
@@ -37,11 +34,8 @@ import api from '../../lib/api';
 interface Supplier {
   id: string;
   name: string;
-  contact_person: string;
   email: string;
   phone: string;
-  website: string;
-  address: string;
   status: 'ACTIVE' | 'INACTIVE' | 'PENDING';
   total_orders: number;
   total_spend: number;
@@ -99,8 +93,8 @@ export default function SuppliersPage() {
   };
 
   const exportCSV = () => {
-    const headers = ['Name','Contact','Email','Phone','Status','Categories','Created'];
-    const rows = suppliers.map(s => [s.name, s.contact_person, s.email, s.phone, s.status, s.categories.join(';'), s.created_at]);
+    const headers = ['Name','Email','Phone','Status','Categories','Created'];
+    const rows = suppliers.map(s => [s.name, s.email, s.phone, s.status, s.categories.join(';'), s.created_at]);
     const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -110,7 +104,7 @@ export default function SuppliersPage() {
   const filteredSuppliers = suppliers.filter(supplier => {
     const matchesSearch = 
       supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      supplier.contact_person.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      supplier.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       supplier.categories.some(c => c.toLowerCase().includes(searchTerm.toLowerCase()));
     
     if (statusFilter === 'ALL') return matchesSearch;
@@ -334,13 +328,13 @@ export default function SuppliersPage() {
                             </div>
                             <div>
                               <div className="text-white font-medium">{supplier.name}</div>
-                              <div className="text-xs text-gray-500">{supplier.website}</div>
+                              <div className="text-xs text-gray-500">Added {new Date(supplier.created_at).toLocaleDateString()}</div>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-white">{supplier.contact_person}</div>
-                          <div className="text-xs text-gray-500">{supplier.email}</div>
+                          <div className="text-white">{supplier.email}</div>
+                          <div className="text-xs text-gray-500">{supplier.phone}</div>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-wrap gap-1">
@@ -479,41 +473,18 @@ function SupplierDetailsModal({ supplier, onClose }: { supplier: Supplier, onClo
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-white/5 rounded-xl border border-white/10">
                 <div className="flex items-center mb-2">
-                  <User className="text-purple-400 mr-2" size={16} />
-                  <span className="text-xs text-gray-400">Contact Person</span>
-                </div>
-                <p className="text-white font-medium">{supplier.contact_person}</p>
-              </div>
-              <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-                <div className="flex items-center mb-2">
                   <Mail className="text-blue-400 mr-2" size={16} />
                   <span className="text-xs text-gray-400">Email</span>
                 </div>
-                <p className="text-white font-medium">{supplier.email}</p>
+                <p className="text-white font-medium">{supplier.email || '—'}</p>
               </div>
               <div className="p-4 bg-white/5 rounded-xl border border-white/10">
                 <div className="flex items-center mb-2">
                   <Phone className="text-green-400 mr-2" size={16} />
                   <span className="text-xs text-gray-400">Phone</span>
                 </div>
-                <p className="text-white font-medium">{supplier.phone}</p>
+                <p className="text-white font-medium">{supplier.phone || '—'}</p>
               </div>
-              <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-                <div className="flex items-center mb-2">
-                  <Globe className="text-cyan-400 mr-2" size={16} />
-                  <span className="text-xs text-gray-400">Website</span>
-                </div>
-                <p className="text-white font-medium">{supplier.website}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Address */}
-          <div>
-            <h3 className="text-sm font-medium text-gray-400 mb-3 uppercase">Address</h3>
-            <div className="p-4 bg-white/5 rounded-xl border border-white/10 flex items-start">
-              <MapPin className="text-amber-400 mr-3 mt-0.5" size={16} />
-              <p className="text-white">{supplier.address}</p>
             </div>
           </div>
 
@@ -553,11 +524,8 @@ function SupplierDetailsModal({ supplier, onClose }: { supplier: Supplier, onClo
 function CreateSupplierModal({ onClose, onRefresh }: { onClose: () => void, onRefresh: () => void }) {
   const [formData, setFormData] = useState({
     name: '',
-    contactPerson: '',
     email: '',
     phone: '',
-    website: '',
-    address: '',
     categories: ''
   });
   const [loading, setLoading] = useState(false);
@@ -568,11 +536,8 @@ function CreateSupplierModal({ onClose, onRefresh }: { onClose: () => void, onRe
     try {
       await api.post('/api/suppliers', {
         name: formData.name,
-        contact_person: formData.contactPerson,
         email: formData.email,
         phone: formData.phone,
-        website: formData.website,
-        address: formData.address,
         categories: formData.categories.split(',').map(c => c.trim()).filter(Boolean),
       });
       onRefresh();
@@ -619,18 +584,6 @@ function CreateSupplierModal({ onClose, onRefresh }: { onClose: () => void, onRe
             />
           </div>
           
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">Contact Person</label>
-            <input 
-              required
-              type="text" 
-              placeholder="Full name"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 transition-all"
-              value={formData.contactPerson}
-              onChange={e => setFormData({...formData, contactPerson: e.target.value})}
-            />
-          </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-1">Email</label>
@@ -656,28 +609,6 @@ function CreateSupplierModal({ onClose, onRefresh }: { onClose: () => void, onRe
             </div>
           </div>
           
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">Website</label>
-            <input 
-              type="url" 
-              placeholder="https://company.com"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 transition-all"
-              value={formData.website}
-              onChange={e => setFormData({...formData, website: e.target.value})}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">Address</label>
-            <textarea 
-              required
-              placeholder="Full address"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 transition-all h-20 resize-none"
-              value={formData.address}
-              onChange={e => setFormData({...formData, address: e.target.value})}
-            />
-          </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-1">Categories (comma separated)</label>
             <input 
