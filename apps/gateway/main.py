@@ -26,9 +26,12 @@ def get_service_url(key, default_name, port):
     # Try to get from Env Var (Render injection)
     url = os.getenv(key)
     if url:
+        # Render's fromService host property may inject just a hostname without protocol
+        if url and not url.startswith(("http://", "https://")):
+            url = f"https://{url}"
         return url
     
-    # If not set, check if we are on Render (RENDER env var is usually set, or we guess)
+    # If not set, check if we are on Render (RENDER env var is usually set)
     if os.getenv("RENDER"):
         # Fallback to Render public URL convention
         return f"https://alphaxai-{default_name}.onrender.com"

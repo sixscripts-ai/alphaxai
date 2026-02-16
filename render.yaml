@@ -13,21 +13,14 @@ services:
     # Start command must also be relative
     startCommand: cd apps/gateway && uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
+      # NOTE: fromService property:host requires paid private networking.
+      # On free plan, use the public .onrender.com URLs directly.
       - key: AUTH_SERVICE_URL
-        fromService:
-          type: web
-          name: alphaxai-auth
-          property: host
+        value: https://alphaxai-auth.onrender.com
       - key: INVENTORY_SERVICE_URL
-        fromService:
-          type: web
-          name: alphaxai-inventory
-          property: host
+        value: https://alphaxai-inventory.onrender.com
       - key: ORGANIZATION_SERVICE_URL
-        fromService:
-          type: web
-          name: alphaxai-organization
-          property: host
+        value: https://alphaxai-organization.onrender.com
       - key: PYTHON_VERSION
         value: 3.11.0
 
