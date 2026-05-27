@@ -68,8 +68,8 @@ export default function SuppliersPage() {
       setSuppliers(res.data.map((s: any) => ({
         ...s,
         total_orders: s.total_orders || 0,
-        total_spend: s.total_spend || 0,
-        rating: s.rating || 0,
+        total_spend: Number(s.total_spend) || 0,
+        rating: Number(s.rating) || 0,
         categories: s.categories || [],
       })));
     } catch (err) {

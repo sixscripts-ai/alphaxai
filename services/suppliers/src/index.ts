@@ -4,6 +4,7 @@ import morgan from 'morgan';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import supplierRoutes from './routes/supplier.routes';
+import analyticsRoutes from './routes/analytics.routes';
 
 dotenv.config();
 
@@ -16,6 +17,7 @@ app.use(morgan('dev'));
 app.use(express.json());
 
 app.use('/api/suppliers', supplierRoutes);
+app.use('/api/suppliers/analytics', analyticsRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy', service: 'suppliers-service' });

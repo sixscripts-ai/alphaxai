@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Sidebar } from '../../../components/ui/Sidebar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -16,7 +16,12 @@ import {
   PieChart,
   Activity,
   Zap,
-  ShieldCheck
+  ShieldCheck,
+  Send,
+  MessageSquare,
+  Bot,
+  User,
+  X
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -65,6 +70,12 @@ interface AnalysisResult {
   error?: string;
 }
 
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  source?: string;
+}
+
 export default function AnalyticsAgentPage() {
   const [file, setFile] = useState<File | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -72,6 +83,39 @@ export default function AnalyticsAgentPage() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
+
+  const [chatOpen, setChatOpen] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const sendChatMessage = async () => {
+    if (!chatInput.trim() || chatLoading) return;
+    const userMsg = chatInput.trim();
+    setChatInput('');
+    setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+    setChatLoading(true);
+    try {
+      const res = await api.post('/api/analytics/insights', { prompt: userMsg });
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: res.data.insight,
+        source: res.data.source,
+      }]);
+    } catch (err: any) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: err.response?.data?.error || err.message || 'Failed to get response',
+      }]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -623,6 +667,108 @@ export default function AnalyticsAgentPage() {
                 </div>
             </motion.div>
         )}
+      {/* Chat Button */}
+      <button
+        onClick={() => setChatOpen(true)}
+        className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-lg shadow-indigo-500/30 flex items-center justify-center transition-all hover:scale-105"
+      >
+        <MessageSquare size={24} />
+      </button>
+
+      {/* Chat Panel */}
+      <AnimatePresence>
+        {chatOpen && (
+          <motion.div
+            initial={{ opacity: 0, x: 300 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 300 }}
+            className="fixed right-0 top-0 z-50 h-full w-full max-w-md bg-[#111] border-l border-white/10 flex flex-col shadow-2xl"
+          >
+            <div className="flex items-center justify-between p-4 border-b border-white/10">
+              <div className="flex items-center">
+                <Bot className="text-indigo-400 mr-2" size={20} />
+                <h2 className="font-bold text-white">AI Inventory Chat</h2>
+              </div>
+              <button
+                onClick={() => setChatOpen(false)}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X size={20} className="text-gray-400" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messages.length === 0 && (
+                <div className="text-center text-gray-500 mt-12">
+                  <Bot size={40} className="mx-auto mb-3 text-indigo-500/50" />
+                  <p className="text-sm">Ask me anything about your inventory!</p>
+                  <p className="text-xs mt-1">Try: "What's my stock status?" or "Show low inventory items"</p>
+                </div>
+              )}
+              {messages.map((msg, idx) => (
+                <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[85%] rounded-2xl p-3 ${
+                    msg.role === 'user'
+                      ? 'bg-indigo-600 text-white rounded-br-md'
+                      : 'bg-white/10 text-gray-200 rounded-bl-md'
+                  }`}>
+                    <div className="flex items-center mb-1">
+                      {msg.role === 'user' ? (
+                        <User size={12} className="mr-1 text-indigo-200" />
+                      ) : (
+                        <Bot size={12} className="mr-1 text-indigo-400" />
+                      )}
+                      <span className="text-xs font-medium opacity-70">
+                        {msg.role === 'user' ? 'You' : 'AI Agent'}
+                      </span>
+                      {msg.source && (
+                        <span className="ml-2 text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded-full">
+                          {msg.source}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  </div>
+                </div>
+              ))}
+              {chatLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-white/10 rounded-2xl rounded-bl-md p-3">
+                    <div className="flex items-center space-x-2">
+                      <Loader2 size={16} className="animate-spin text-indigo-400" />
+                      <span className="text-sm text-gray-400">Thinking...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+
+            <div className="p-4 border-t border-white/10">
+              <form
+                onSubmit={(e) => { e.preventDefault(); sendChatMessage(); }}
+                className="flex items-center space-x-2"
+              >
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder="Ask about your inventory..."
+                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500/50 transition-colors"
+                  disabled={chatLoading}
+                />
+                <button
+                  type="submit"
+                  disabled={chatLoading || !chatInput.trim()}
+                  className="p-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-white/10 disabled:text-gray-500 text-white rounded-xl transition-colors"
+                >
+                  <Send size={18} />
+                </button>
+              </form>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       </main>
     </div>
   );

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Sidebar } from '../../components/ui/Sidebar';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building, MapPin, Users, Plus, Mail, Phone, MoreHorizontal, Globe, Loader2, Edit, Trash2, XCircle } from 'lucide-react';
+import { Building, MapPin, Users, Plus, Mail, MoreHorizontal, Globe, Loader2, Edit, Trash2, XCircle } from 'lucide-react';
 import api from '../../lib/api';
 
 interface Location {
@@ -26,6 +26,7 @@ export default function OrganizationPage() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [showAddLocation, setShowAddLocation] = useState(false);
+  const [showInviteMember, setShowInviteMember] = useState(false);
 
   useEffect(() => {
     if (activeTab === 'locations') {
@@ -82,7 +83,7 @@ export default function OrganizationPage() {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setShowAddLocation(true)}
+            onClick={() => activeTab === 'locations' ? setShowAddLocation(true) : setShowInviteMember(true)}
             className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-xl font-medium shadow-lg shadow-orange-500/20 flex items-center"
           >
             <Plus size={20} className="mr-2" />
@@ -125,7 +126,7 @@ export default function OrganizationPage() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             className="border-2 border-dashed border-white/10 rounded-3xl p-6 flex flex-col items-center justify-center text-gray-500 hover:border-white/20 hover:bg-white/5 transition-all cursor-pointer min-h-[200px]"
-            onClick={() => setShowAddLocation(true)}
+            onClick={() => activeTab === 'locations' ? setShowAddLocation(true) : setShowInviteMember(true)}
           >
             <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-4">
               <Plus size={24} />
@@ -135,13 +136,20 @@ export default function OrganizationPage() {
         </div>
       </main>
 
-       {/* Add Location Modal */}
-       <AnimatePresence>
-        {showAddLocation && (
-          <AddLocationModal onClose={() => setShowAddLocation(false)} onRefresh={fetchLocations} />
-        )}
-      </AnimatePresence>
-    </div>
+        {/* Add Location Modal */}
+        <AnimatePresence>
+          {showAddLocation && (
+            <AddLocationModal onClose={() => setShowAddLocation(false)} onRefresh={fetchLocations} />
+          )}
+        </AnimatePresence>
+
+        {/* Invite Member Modal */}
+        <AnimatePresence>
+          {showInviteMember && (
+            <InviteMemberModal onClose={() => setShowInviteMember(false)} onRefresh={fetchUsers} />
+          )}
+        </AnimatePresence>
+      </div>
   );
 }
 
@@ -224,6 +232,96 @@ function UserCard({ user, index }: { user: User, index: number }) {
         {user.email}
       </div>
     </motion.div>
+  );
+}
+
+function InviteMemberModal({ onClose, onRefresh }: { onClose: () => void, onRefresh: () => void }) {
+  const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [role, setRole] = useState('MEMBER');
+  const [department, setDepartment] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      await api.post('/api/team/invite', { email, name, role, department });
+      onRefresh();
+      onClose();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to invite member');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="relative bg-[#111] border border-white/10 rounded-2xl p-6 w-full max-w-md"
+      >
+        <h2 className="text-xl font-bold text-white mb-4">Invite Team Member</h2>
+        {error && <p className="text-red-400 text-sm mb-3 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Email *</label>
+            <input
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-orange-500"
+              placeholder="colleague@company.com"
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Name</label>
+            <input
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-orange-500"
+              placeholder="Jane Smith"
+              value={name}
+              onChange={e => setName(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Role</label>
+            <select
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-orange-500"
+              value={role}
+              onChange={e => setRole(e.target.value)}
+            >
+              <option value="OWNER">Owner</option>
+              <option value="ADMIN">Admin</option>
+              <option value="MANAGER">Manager</option>
+              <option value="MEMBER">Member</option>
+              <option value="VIEWER">Viewer</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Department</label>
+            <input
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-orange-500"
+              placeholder="Engineering"
+              value={department}
+              onChange={e => setDepartment(e.target.value)}
+            />
+          </div>
+          <div className="flex justify-end space-x-2 mt-4">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-gray-400 hover:text-white transition-colors">Cancel</button>
+            <button type="submit" disabled={loading} className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-600 rounded-lg text-white font-medium disabled:opacity-50 flex items-center">
+              {loading && <Loader2 size={16} className="mr-2 animate-spin" />}
+              Send Invite
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
   );
 }
 

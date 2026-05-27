@@ -334,8 +334,8 @@ export default function InventoryPage() {
                             <div className="text-[10px] text-gray-500 mt-0.5">ROP: {item.reorder_point}</div>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="text-gray-300">${item.unit_cost.toFixed(2)}</div>
-                            <div className="text-[10px] text-gray-500">Total: ${(item.unit_cost * item.quantity_on_hand).toLocaleString()}</div>
+                            <div className="text-gray-300">${Number(item.unit_cost).toFixed(2)}</div>
+                            <div className="text-[10px] text-gray-500">Total: ${(Number(item.unit_cost) * item.quantity_on_hand).toLocaleString()}</div>
                           </td>
                           <td className="px-6 py-4">
                              {item.status === 'LOW_STOCK' && (

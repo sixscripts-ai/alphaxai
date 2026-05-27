@@ -13,6 +13,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./packages/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./packages/database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 5s
@@ -69,7 +70,7 @@ services:
     environment:
       PORT: 3001
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-inventory_saas}
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_SECRET: ${JWT_SECRET:-super-secret-key}
     depends_on:
       postgres:
         condition: service_healthy
@@ -87,7 +88,7 @@ services:
     environment:
       PORT: 3002
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-inventory_saas}
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_SECRET: ${JWT_SECRET:-super-secret-key}
     depends_on:
       postgres:
         condition: service_healthy
@@ -105,7 +106,7 @@ services:
     environment:
       PORT: 3003
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-inventory_saas}
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_SECRET: ${JWT_SECRET:-super-secret-key}
     depends_on:
       postgres:
         condition: service_healthy
@@ -123,7 +124,7 @@ services:
     environment:
       PORT: 3009
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-inventory_saas}
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_SECRET: ${JWT_SECRET:-super-secret-key}
     depends_on:
       postgres:
         condition: service_healthy
@@ -141,7 +142,7 @@ services:
     environment:
       PORT: 3010
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-inventory_saas}
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_SECRET: ${JWT_SECRET:-super-secret-key}
     depends_on:
       postgres:
         condition: service_healthy
@@ -159,7 +160,7 @@ services:
     environment:
       PORT: 3011
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-inventory_saas}
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_SECRET: ${JWT_SECRET:-super-secret-key}
     depends_on:
       postgres:
         condition: service_healthy
@@ -180,6 +181,24 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  # Web App (Next.js)
+  # ─────────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        API_GATEWAY_URL: http://gateway:8000
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+    depends_on:
+      gateway:
+        condition: service_started
     restart: unless-stopped
 
 volumes:

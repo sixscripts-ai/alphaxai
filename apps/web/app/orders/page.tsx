@@ -64,74 +64,16 @@ export default function OrdersPage() {
     setLoading(true);
     setError(null);
     try {
-      // Mock data for demonstration - replace with actual API call
-      // const response = await api.get('/api/orders');
-      // setOrders(response.data);
-      
-      // Simulated data
-      setTimeout(() => {
-        setOrders([
-          {
-            id: '1',
-            order_number: 'ORD-2024-001',
-            customer_name: 'Acme Corp',
-            customer_email: 'orders@acme.com',
-            status: 'PROCESSING',
-            total_amount: 12500.00,
-            items_count: 15,
-            created_at: '2024-01-15T10:30:00Z',
-            shipping_address: '123 Main St, New York, NY 10001'
-          },
-          {
-            id: '2',
-            order_number: 'ORD-2024-002',
-            customer_name: 'Tech Solutions Inc',
-            customer_email: 'procurement@techsol.io',
-            status: 'SHIPPED',
-            total_amount: 8750.50,
-            items_count: 8,
-            created_at: '2024-01-14T14:22:00Z',
-            shipping_address: '456 Tech Blvd, San Francisco, CA 94105'
-          },
-          {
-            id: '3',
-            order_number: 'ORD-2024-003',
-            customer_name: 'Global Retail',
-            customer_email: 'buying@globalretail.com',
-            status: 'PENDING',
-            total_amount: 45000.00,
-            items_count: 45,
-            created_at: '2024-01-15T09:15:00Z',
-            shipping_address: '789 Commerce Ave, Chicago, IL 60601'
-          },
-          {
-            id: '4',
-            order_number: 'ORD-2024-004',
-            customer_name: 'StartUp Labs',
-            customer_email: 'orders@startuplabs.co',
-            status: 'DELIVERED',
-            total_amount: 2300.00,
-            items_count: 5,
-            created_at: '2024-01-10T16:45:00Z',
-            shipping_address: '321 Innovation Way, Austin, TX 78701'
-          },
-          {
-            id: '5',
-            order_number: 'ORD-2024-005',
-            customer_name: 'MegaMart',
-            customer_email: 'supply@megamart.com',
-            status: 'CANCELLED',
-            total_amount: 1500.00,
-            items_count: 3,
-            created_at: '2024-01-12T11:00:00Z',
-            shipping_address: '555 Retail Park, Miami, FL 33101'
-          }
-        ]);
-        setLoading(false);
-      }, 1000);
-    } catch (err) {
+      const response = await api.get('/api/orders');
+      setOrders(Array.isArray(response.data) ? response.data : (response.data.orders || []));
+    } catch (err: any) {
       console.error('Failed to fetch orders', err);
-      setError('Failed to load orders. Please try again.');
+      if (err.response?.status === 501) {
+        setError('orders-service-not-implemented');
+      } else {
+        setError('Failed to load orders. Please try again.');
+      }
+    } finally {
       setLoading(false);
     }
   };
@@ -217,7 +159,7 @@ export default function OrdersPage() {
               animate={{ opacity: 1, scale: 1 }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => toast('Orders service coming soon', 'info')}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl font-medium shadow-lg shadow-blue-500/20 flex items-center transition-colors"
             >
               <Plus size={20} className="mr-2" />
@@ -304,7 +246,32 @@ export default function OrdersPage() {
           animate={{ opacity: 1, y: 0 }}
           className="glass-dark rounded-3xl border border-white/10 overflow-hidden relative z-10"
         >
-          {error ? (
+          {error === 'orders-service-not-implemented' ? (
+            <div className="text-center py-20">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-500/10 mb-4">
+                <Package className="text-blue-500" size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Orders Service Coming Soon</h3>
+              <p className="text-gray-400 max-w-md mx-auto mb-6">
+                The orders management feature is not yet available. We are working on building a 
+                dedicated service to track and manage customer orders across all channels.
+              </p>
+              <div className="flex justify-center space-x-4">
+                <button 
+                  onClick={fetchOrders}
+                  className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
+                >
+                  Check Again
+                </button>
+                <button
+                  onClick={() => window.history.back()}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-colors"
+                >
+                  Go Back
+                </button>
+              </div>
+            </div>
+          ) : error ? (
             <div className="text-center py-20">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-500/10 mb-4">
                 <AlertTriangle className="text-red-500" size={32} />

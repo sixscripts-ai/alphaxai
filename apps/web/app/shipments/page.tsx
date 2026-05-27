@@ -68,7 +68,7 @@ export default function ShipmentsPage() {
     setError(null);
     try {
       const res = await api.get('/api/shipments');
-      setShipments(res.data.map((s: any) => ({ ...s, items_count: s.items_count || 0 })));
+      setShipments(res.data.map((s: any) => ({ ...s, items_count: s.items_count || 0, cost: Number(s.cost) || 0 })));
     } catch (err) {
       console.error('Failed to fetch shipments', err);
       setError('Failed to load shipments. Please try again.');

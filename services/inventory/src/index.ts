@@ -5,6 +5,8 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import itemRoutes from './routes/item.routes';
 import analyticsRoutes from './routes/analytics.routes';
+import reportRoutes from './routes/report.routes';
+import { ReportController } from './controllers/report.controller';
 
 dotenv.config();
 
@@ -17,7 +19,11 @@ app.use(morgan('dev'));
 app.use(express.json());
 
 app.use('/api/inventory/analytics', analyticsRoutes);
+app.use('/api/inventory/reports', reportRoutes);
 app.use('/api/inventory', itemRoutes);
+
+// Initialize saved_reports table on startup
+ReportController.initTable();
 
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy', service: 'inventory-service' });
